@@ -22,6 +22,7 @@
 #include <algorithm>
 using std::sort;
 
+#include <list>
 #include <vector>
 using std::vector;
 #include "../main.h"
@@ -174,6 +175,7 @@ void RTTFibers::seed()
 {
     clearFibersRTT();
     int previousLinePointer = 0;
+    
 	 
     float xVoxel = DatasetManager::getInstance()->getVoxelX();
     float yVoxel = DatasetManager::getInstance()->getVoxelY();
@@ -228,23 +230,86 @@ void RTTFibers::seed()
                             if(RTTrackingHelper::getInstance()->isRandomInit())
                             {
                                 seed = generateRandomSeed(minCorner,maxCorner);
-                            }
-						    //Track both sides
+                            }			    
 							performHARDIRTT( seed,  1, pointsF, colorF); //First pass
                             draw = m_render && m_and;
-						    performHARDIRTT( seed, -1, pointsB, colorB); //Second pass
+						    performHARDIRTT( seed , -1, pointsB, colorB); //Second pass
                         }
                         else if(m_isSheet)
                         {
+                            stopSheetTracking = 0;
                             Vector seed(x,y,z);
                             if(RTTrackingHelper::getInstance()->isRandomInit())
                             {
                                 seed = generateRandomSeed(minCorner,maxCorner);
                             }
 						    //Track both sides
-							performSheetRTT( seed,  1, pointsF, colorF); //First pass
-                            draw = m_render && m_and;
-						    performSheetRTT( seed, -1, pointsB, colorB); //Second pass
+                            std::vector<float> s;
+                            s.push_back(seed.x);
+                            s.push_back(seed.y);
+                            s.push_back(seed.z);
+                            toVisit.push_back(s);
+                            while(!toVisit.empty())
+                            {    
+                                pointsF.clear();
+                                pointsB.clear();
+                                colorB.clear();
+                                colorF.clear();
+                                seed = Vector(toVisit.front()[0], toVisit.front()[1], toVisit.front()[2]);
+							    performSheetRTT( seed,  1, pointsF, colorF); //First pass
+                                draw = m_render && m_and;
+						        performSheetRTT( seed , -1, pointsB, colorB); //Second pass
+                                toVisit.pop_front(); 
+
+                                if( (pointsF.size() + pointsB.size())/3 * getStep() > getMinFiberLength() && (pointsF.size() + pointsB.size())/3 * getStep() < getMaxFiberLength() && (m_render || draw )&& (draw || m_and)) //
+						        {
+                                    
+                                    bool keepRight = false;
+                                    bool keepLeft = false;
+                                    //Insert strategically for drawArray methods.
+                                    if(pointsF.size() != 0)
+                                    {
+                                        m_nbPtsPerLine.push_back(pointsF.size()/3);
+                                        m_linePointer.push_back(previousLinePointer + pointsF.size()/3);
+                                        previousLinePointer = m_linePointer[m_lines+1];
+                                        m_lines++;
+
+                                        m_streamlinesPoints.insert(m_streamlinesPoints.end(), pointsF.begin(), pointsF.end());
+                                        m_streamlinesColors.insert(m_streamlinesColors.end(), colorF.begin(), colorF.end());
+                                        keepRight = true;
+                                    }
+                            
+                                    if(pointsB.size() != 0)
+                                    {
+                                        m_nbPtsPerLine.push_back(pointsB.size()/3);
+                                        m_linePointer.push_back(previousLinePointer + pointsB.size()/3);
+                                        previousLinePointer = m_linePointer[m_lines+1];
+                                        m_lines++;
+
+                                        m_streamlinesPoints.insert(m_streamlinesPoints.end(), pointsB.begin(), pointsB.end());
+                                        m_streamlinesColors.insert(m_streamlinesColors.end(), colorB.begin(), colorB.end());
+                                        keepLeft = true;
+                                    }
+
+                                    if(keepLeft && keepRight)
+                                    {
+                                        m_LeftRightVector.push_back(true);
+                                        m_LeftRightVector.push_back(true);
+                                    }
+                                    else if(keepLeft || keepRight)
+                                    {
+                                        m_LeftRightVector.push_back(false);
+                                    }
+
+                                    if(RTTrackingHelper::getInstance()->isTractoDrivenRSN())
+                                    {
+                                        insertPointsForTractoDriven(pointsF, pointsB);
+                                    }
+                                    m_steppedOnceInsideChildBox = false;
+                                    m_steppedOnceIntoAND = false;
+
+						        }
+                            }
                         }
                         else
                         {
@@ -252,53 +317,7 @@ void RTTFibers::seed()
 						    performDTIRTT( Vector(x,y,z),  1, pointsF, colorF); //First pass
 						    performDTIRTT( Vector(x,y,z), -1, pointsB, colorB); //Second pass
                         }
-                        
-						if( (pointsF.size() + pointsB.size())/3 * getStep() > getMinFiberLength() && (pointsF.size() + pointsB.size())/3 * getStep() < getMaxFiberLength() && (m_render || draw )&& (draw || m_and))
-						{
-                            bool keepRight = false;
-                            bool keepLeft = false;
-                            //Insert strategically for drawArray methods.
-                            if(pointsF.size() != 0)
-                            {
-                                m_nbPtsPerLine.push_back(pointsF.size()/3);
-                                m_linePointer.push_back(previousLinePointer + pointsF.size()/3);
-                                previousLinePointer = m_linePointer[m_lines+1];
-                                m_lines++;
-
-                                m_streamlinesPoints.insert(m_streamlinesPoints.end(), pointsF.begin(), pointsF.end());
-                                m_streamlinesColors.insert(m_streamlinesColors.end(), colorF.begin(), colorF.end());
-                                keepRight = true;
-                            }
-                            
-                            if(pointsB.size() != 0)
-                            {
-                                m_nbPtsPerLine.push_back(pointsB.size()/3);
-                                m_linePointer.push_back(previousLinePointer + pointsB.size()/3);
-                                previousLinePointer = m_linePointer[m_lines+1];
-                                m_lines++;
-
-                                m_streamlinesPoints.insert(m_streamlinesPoints.end(), pointsB.begin(), pointsB.end());
-                                m_streamlinesColors.insert(m_streamlinesColors.end(), colorB.begin(), colorB.end());
-                                keepLeft = true;
-                            }
-
-                            if(keepLeft && keepRight)
-                            {
-                                m_LeftRightVector.push_back(true);
-                                m_LeftRightVector.push_back(true);
-                            }
-                            else if(keepLeft || keepRight)
-                            {
-                                m_LeftRightVector.push_back(false);
-                            }
-
-                            if(RTTrackingHelper::getInstance()->isTractoDrivenRSN())
-                            {
-                                insertPointsForTractoDriven(pointsF, pointsB);
-                            }
-                            m_steppedOnceInsideChildBox = false;
-                            m_steppedOnceIntoAND = false;
-						}
+                       						
 					}
 				}
 			}
@@ -1790,6 +1809,9 @@ void RTTFibers::performHARDIRTT(Vector seed, int bwdfwd, vector<float>& points, 
 ///////////////////////////////////////////////////////////////////////////
 void RTTFibers::performSheetRTT(Vector seed, int bwdfwd, vector<float>& points, vector<float>& color)
 { 
+    if(stopSheetTracking < 2)
+        stopSheetTracking++;
+
     //Vars
     Vector currPosition(seed); //Current PIXEL position
     Vector nextPosition; //Next Pixel position
@@ -1908,6 +1930,15 @@ void RTTFibers::performSheetRTT(Vector seed, int bwdfwd, vector<float>& points, 
                         color.push_back( std::abs(currDirection.y) );
                         color.push_back( std::abs(currDirection.z) );
                         color.push_back( m_alpha );
+                        
+                        if(stopSheetTracking < 2)
+                        {
+                            std::vector<float> v;
+                            v.push_back(currPosition.x);
+                            v.push_back(currPosition.y);
+                            v.push_back(currPosition.z);
+                            toVisit.push_back(v);
+                        }
 
                         //Advance
                         currPosition = nextPosition;

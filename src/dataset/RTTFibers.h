@@ -15,6 +15,7 @@
 
 #include <GL/glew.h>
 #include <vector>
+#include <list>
 
 class RTTFibers 
 {
@@ -136,6 +137,8 @@ private:
 
     std::vector<float> m_storedDir;
     int m_storedPermute;
+    std::list<std::vector<float> > toVisit;
+    int stopSheetTracking;
 
 	float m_alpha;
     int m_currentSeedBoxID;
