@@ -344,11 +344,16 @@ void MainFrame::initLayout()
     m_pTrackingWindowHardi->SetScrollbars( 10, 10, 50, 50 );
     m_pTrackingWindowHardi->EnableScrolling( true, true );
 
+    m_pTrackingWindowSheet = new TrackingWindow( m_tab, this, wxID_ANY, wxDefaultPosition, wxSize( PROP_WND_WIDTH, PROP_WND_HEIGHT ), false ); // Contains realtime tracking properties
+    m_pTrackingWindowSheet->SetScrollbars( 10, 10, 50, 50 );
+    m_pTrackingWindowSheet->EnableScrolling( true, true );
+
 	m_pFMRIWindow = new FMRIWindow( m_tab, this, wxID_ANY, wxDefaultPosition, wxSize( PROP_WND_WIDTH, PROP_WND_HEIGHT )); // Contains realtime fmri properties
     m_pFMRIWindow->SetScrollbars( 10, 10, 50, 50 );
     m_pFMRIWindow->EnableScrolling( true, true );
 
     m_tab->AddPage( m_pPropertiesWindow, wxT( "Properties" ) );
+    m_tab->AddPage( m_pTrackingWindowSheet, wxT( "Sheet tracking" ) );
     m_tab->AddPage( m_pTrackingWindowHardi, wxT( "HARDI tracking" ) );
     m_tab->AddPage( m_pFMRIWindow, wxT( "rsfMRI networks" ) );
 	m_tab->AddPage( m_pTrackingWindow, wxT( "DTI tracking" ) );

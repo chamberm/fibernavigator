@@ -45,6 +45,7 @@ RTTFibers::RTTFibers()
 	m_alpha( 1.0f ),
     m_currentSeedBoxID( 0 ),
     m_isHARDI( false ),
+    m_isSheet( false ),
     m_countGMstep( 0 ),
 	m_stop( false ),
     m_and( true ),
@@ -58,6 +59,12 @@ RTTFibers::RTTFibers()
     m_prune(true)
 {
     m_bufferObjectsRTT = new GLuint[2];
+    permutes.push_back(Vector(0,1,2));
+    permutes.push_back(Vector(1,2,0));
+    permutes.push_back(Vector(2,1,0));
+    permutes.push_back(Vector(1,0,2));
+    permutes.push_back(Vector(0,2,1));
+    permutes.push_back(Vector(2,0,1));
 }
 
 void RTTFibers::setSeedMapInfo(Anatomy *info)
@@ -227,6 +234,18 @@ void RTTFibers::seed()
                             draw = m_render && m_and;
 						    performHARDIRTT( seed, -1, pointsB, colorB); //Second pass
                         }
+                        else if(m_isSheet)
+                        {
+                            Vector seed(x,y,z);
+                            if(RTTrackingHelper::getInstance()->isRandomInit())
+                            {
+                                seed = generateRandomSeed(minCorner,maxCorner);
+                            }
+						    //Track both sides
+							performSheetRTT( seed,  1, pointsF, colorF); //First pass
+                            draw = m_render && m_and;
+						    performSheetRTT( seed, -1, pointsB, colorB); //Second pass
+                        }
                         else
                         {
 						    //Track both sides
@@ -328,6 +347,18 @@ void RTTFibers::seed()
 							performHARDIRTT( seed,  1, pointsF, colorF); //First pass
                             draw = m_render && m_and;
 						    performHARDIRTT( seed, -1, pointsB, colorB); //Second pass
+                        }
+                        else if(m_isSheet)
+                        {
+                            Vector seed(x,y,z);
+                            if(RTTrackingHelper::getInstance()->isRandomInit())
+                            {
+                                seed = generateRandomSeed(minCorner,maxCorner);
+                            }
+						    //Track both sides
+							performSheetRTT( seed,  1, pointsF, colorF); //First pass
+                            draw = m_render && m_and;
+						    performSheetRTT( seed, -1, pointsB, colorB); //Second pass
                         }
                         else
                         {
@@ -807,6 +838,7 @@ Vector RTTFibers::advecIntegrateHARDI( Vector vin, const std::vector<float> &sti
     float angleMin = 360.0f;
     float angle = 0.0f;
     float g = m_vinvout;
+
     float wm = m_pMaskInfo->at(s_number);
     float gm = 0;
     float F = 0;
@@ -863,6 +895,109 @@ Vector RTTFibers::advecIntegrateHARDI( Vector vin, const std::vector<float> &sti
 
     //Weight between in and out directions. Magnet will also be weighted by distance.
     Vector res = (1-F)*((1.0 - g) * vin + g * vOut) + F * vMagnet;
+   
+    return res;
+}
+
+Vector RTTFibers::advecIntegrateSheet( Vector vin, const std::vector<float> &sticks, float s_number, Vector pos, int& permute ) 
+{
+    Vector vOut(0,0,0);
+    Vector vMagnet(0,0,0);
+    float angleMin = m_angleThreshold;//360.0f;
+    float angle = 0.0f;
+    float g = m_vinvout;
+    Vector flippedAxes(RTTrackingHelper::getInstance()->getMaximaFlip());
+
+    float wm = m_pMaskInfo->at(s_number);
+    float gm = 0;
+
+    if(m_pGMInfo != NULL && RTTrackingHelper::getInstance()->isGMAllowed())
+    {
+        gm = m_pGMInfo->at(s_number);
+    }
+	vin.normalize();
+
+    std::vector<float> previousSticks = m_pMaximasInfo->getMainDirData()->at(s_number);
+    previousSticks[0] *= flippedAxes.x;
+    previousSticks[1] *= flippedAxes.y;
+    previousSticks[2] *= flippedAxes.z;
+    previousSticks[3] *= flippedAxes.x;
+    previousSticks[4] *= flippedAxes.y;
+    previousSticks[5] *= flippedAxes.z;
+    previousSticks[6] *= flippedAxes.x;
+    previousSticks[7] *= flippedAxes.y;
+    previousSticks[8] *= flippedAxes.z;
+
+    vector<vector<float> > dotMatrix (previousSticks.size()/3,sticks.size()/3);
+    for(unsigned int i=0; i < dotMatrix.size(); i++)
+        for(unsigned int j=0; j < dotMatrix[i].size(); j++)
+            dotMatrix[i][j] = 90;
+
+    for(unsigned int i=0; i < previousSticks.size()/3; i++)
+    {
+        Vector v1(previousSticks[i*3],previousSticks[i*3+1], previousSticks[i*3+2]);
+
+        if(v1.normalizeAndReturn() != 0)
+            {
+            for(unsigned int j=0; j < sticks.size()/3; j++)
+            {
+                Vector v2(sticks[j*3],sticks[j*3+1], sticks[j*3+2]);
+            
+                if(v2.normalizeAndReturn() != 0)
+                {
+                    if( v1.Dot(v2) < 0 ) //Ensures both vectors points in the same direction
+                    {
+                        v2 *= -1;
+                    }
+
+                    //Angle value
+                    float dot = v1.Dot(v2);
+                    float acos = std::acos( dot );
+                    angle = 180 * acos / M_PI;
+        
+                    //Direction most probable
+                    if( angle < angleMin )
+                    {
+                        dotMatrix[i][j] = angle;
+                    } 
+                }
+            }
+        }
+    }
+
+    //find permute and set new permuteID
+    int minDot = 1080;
+    int whichPermute = 0;
+    for(unsigned int i=0; i<permutes.size(); i++)
+    {
+        int a = permutes[i].x;
+        int b = permutes[i].y;
+        int c = permutes[i].z;
+        float sumDot = dotMatrix[0][a] + dotMatrix[1][b] + dotMatrix[2][c];
+        
+        if(sumDot < minDot)
+        {
+            minDot = sumDot;
+            whichPermute = i;
+        }
+    }
+
+    if(permute == 0)
+    {
+        permute = permutes[whichPermute].x;    
+    }
+    else if (permute == 1)
+    {
+        permute = permutes[whichPermute].y;
+    }
+    else
+    {
+        permute = permutes[whichPermute].z;
+    }
+
+    vOut = Vector(sticks[permute*3],sticks[permute*3+1], sticks[permute*3+2]);
+    Vector res = ((1.0 - g) * vin + g * vOut);
+    
    
     return res;
 }
@@ -1239,7 +1374,7 @@ void RTTFibers::performDTIRTT(Vector seed, int bwdfwd, vector<float>& points, ve
 // Draft a direction to start the tracking process using a probabilistic random
 // [0 --- |v1| --- |v2| --- |v3|]
 ///////////////////////////////////////////////////////////////////////////
-std::vector<float> RTTFibers::pickDirection(std::vector<float> initialPeaks, bool initWithDir, Vector currPos)
+std::vector<float> RTTFibers::pickDirection(std::vector<float> initialPeaks, bool initWithDir, Vector currPos, int& permute)
 {
     std::vector<float> draftedPeak;
     if(!initWithDir)
@@ -1263,18 +1398,21 @@ std::vector<float> RTTFibers::pickDirection(std::vector<float> initialPeaks, boo
 		    draftedPeak.push_back(initialPeaks[0]);
 		    draftedPeak.push_back(initialPeaks[1]);
 		    draftedPeak.push_back(initialPeaks[2]);
+            permute = 0;
 	    }
 	    else if(weight < norms[0] + norms[1])
 	    {
 		    draftedPeak.push_back(initialPeaks[3]);
 		    draftedPeak.push_back(initialPeaks[4]);
 		    draftedPeak.push_back(initialPeaks[5]);
+            permute = 1;
 	    }
 	    else
 	    {
 		    draftedPeak.push_back(initialPeaks[6]);
 		    draftedPeak.push_back(initialPeaks[7]);
 		    draftedPeak.push_back(initialPeaks[8]);
+            permute = 2;
 	    }
     }
     else
@@ -1494,6 +1632,8 @@ void RTTFibers::performHARDIRTT(Vector seed, int bwdfwd, vector<float>& points, 
     sticksNumber = currVoxelz * columns * rows + currVoxely *columns + currVoxelx;
     std::vector<float> sticks;
 
+    int permutationId;
+
     m_countGMstep = 0;
     if( sticksNumber < m_pMaximasInfo->getMainDirData()->size() )
     {
@@ -1505,12 +1645,14 @@ void RTTFibers::performHARDIRTT(Vector seed, int bwdfwd, vector<float>& points, 
 
             if(bwdfwd != -1)
             {
-                sticks = pickDirection(m_pMaximasInfo->getMainDirData()->at(sticksNumber), initWithDir, currPosition); 
+                sticks = pickDirection(m_pMaximasInfo->getMainDirData()->at(sticksNumber), initWithDir, currPosition, permutationId); 
                 m_storedDir = sticks;
+                
             }
             else
             { 
                 sticks = m_storedDir;
+                
             }
 
 
@@ -1619,6 +1761,191 @@ void RTTFibers::performHARDIRTT(Vector seed, int bwdfwd, vector<float>& points, 
 
                             //Advection next direction
                             nextDirection = advecIntegrateHARDI( currDirection, sticks, sticksNumber, nextPosition );
+
+                            //Direction of seeding (backward of forward)
+                            nextDirection *= bwdfwd;
+                            nextDirection.normalize();
+
+                            if( currDirection.Dot(nextDirection) < 0 ) //Ensures both vectors points in the same direction
+                            {
+                                nextDirection *= -1;
+                            }
+
+                            //Angle value
+                            float dot = currDirection.Dot(nextDirection);
+                            float acos = std::acos( dot );
+                            angle = 180 * acos / M_PI;
+
+                            it++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Performs realtime HARDI fiber tracking along direction bwdfwd (backward, forward)
+///////////////////////////////////////////////////////////////////////////
+void RTTFibers::performSheetRTT(Vector seed, int bwdfwd, vector<float>& points, vector<float>& color)
+{ 
+    //Vars
+    Vector currPosition(seed); //Current PIXEL position
+    Vector nextPosition; //Next Pixel position
+    Vector currDirection, nextDirection; //Directions re-aligned 
+    Vector flippedAxes(RTTrackingHelper::getInstance()->getMaximaFlip());
+
+    unsigned int sticksNumber; 
+    int currVoxelx, currVoxely, currVoxelz;
+    float angle; 
+    float absPeak = 0;
+
+    int columns = DatasetManager::getInstance()->getColumns();
+    int rows    = DatasetManager::getInstance()->getRows();
+
+    float xVoxel = DatasetManager::getInstance()->getVoxelX();
+    float yVoxel = DatasetManager::getInstance()->getVoxelY();
+    float zVoxel = DatasetManager::getInstance()->getVoxelZ();
+
+    //Get the seed voxel
+    currVoxelx = (int)( floor(currPosition.x / xVoxel) );
+    currVoxely = (int)( floor(currPosition.y / yVoxel) );
+    currVoxelz = (int)( floor(currPosition.z / zVoxel) );
+
+    int permutationID;
+
+    //Corresponding stick number
+    unsigned int FirststicksNumber = currVoxelz * columns * rows + currVoxely *columns + currVoxelx;
+    std::vector<float> sticks;
+
+    m_countGMstep = 0;
+    if( FirststicksNumber < m_pMaximasInfo->getMainDirData()->size() )
+    {
+        absPeak = std::abs(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[0] + m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[1] + m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[2]);
+
+        if( withinMapThreshold(FirststicksNumber, currPosition) && !m_stop && absPeak != 0)
+        {
+            bool initWithDir = RTTrackingHelper::getInstance()->isInitSeed();
+
+            if(bwdfwd != -1)
+            {
+                sticks = pickDirection(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber), initWithDir, currPosition, permutationID); 
+                m_storedDir = sticks;
+                m_storedPermute = permutationID;
+            }
+            else
+            { 
+                sticks = m_storedDir;
+                permutationID = m_storedPermute;
+            }
+
+            currDirection.x = flippedAxes.x * sticks[0];
+            currDirection.y = flippedAxes.y * sticks[1];
+            currDirection.z = flippedAxes.z * sticks[2];
+
+            //Direction for seeding (forward or backward)
+            currDirection.normalize();
+            currDirection *= bwdfwd;
+
+            //Next position
+            nextPosition = currPosition + ( m_step * currDirection );
+
+            //Get the voxel stepped into
+            currVoxelx = (int)( floor(nextPosition.x / xVoxel) );
+            currVoxely = (int)( floor(nextPosition.y / yVoxel) );
+            currVoxelz = (int)( floor(nextPosition.z / zVoxel) );
+
+            //Corresponding stick number
+            sticksNumber = currVoxelz * columns * rows + currVoxely * columns + currVoxelx;
+            if( sticksNumber < m_pMaximasInfo->getMainDirData()->size())
+            {
+                absPeak = std::abs(m_pMaximasInfo->getMainDirData()->at(sticksNumber)[0] + m_pMaximasInfo->getMainDirData()->at(sticksNumber)[1] + m_pMaximasInfo->getMainDirData()->at(sticksNumber)[2]);
+
+                if( absPeak != 0 && withinMapThreshold(sticksNumber, nextPosition))
+                {
+
+                    sticks = m_pMaximasInfo->getMainDirData()->at(sticksNumber); 
+                    sticks[0] *= flippedAxes.x;
+                    sticks[1] *= flippedAxes.y;
+                    sticks[2] *= flippedAxes.z;
+                    sticks[3] *= flippedAxes.x;
+                    sticks[4] *= flippedAxes.y;
+                    sticks[5] *= flippedAxes.z;
+                    sticks[6] *= flippedAxes.x;
+                    sticks[7] *= flippedAxes.y;
+                    sticks[8] *= flippedAxes.z;
+
+                    //Advection next direction
+                    nextDirection = advecIntegrateSheet( currDirection, sticks, FirststicksNumber, nextPosition, permutationID );
+
+                    //Direction of seeding
+                    nextDirection *= bwdfwd;
+                    nextDirection.normalize();
+
+                    if( currDirection.Dot(nextDirection) < 0 ) //Ensures the two vectors have the same directions
+                    {
+                        nextDirection *= -1;
+                    }
+
+                    //Angle value
+                    float dot = currDirection.Dot(nextDirection);
+                    float acos = std::acos( dot );
+                    angle = 180 * acos / M_PI;
+
+                    ///////////////////////////
+                    //Tracking along the fiber
+                    //////////////////////////
+                    float it = 2;
+                    bool insideBox = false;
+                    while( angle <= m_angleThreshold && withinMapThreshold(sticksNumber, nextPosition) && !m_stop)
+                    {
+                        //Insert point to be rendered
+                        points.push_back( currPosition.x );
+                        points.push_back( currPosition.y );
+                        points.push_back( currPosition.z );
+                        color.push_back( std::abs(currDirection.x) );
+                        color.push_back( std::abs(currDirection.y) );
+                        color.push_back( std::abs(currDirection.z) );
+                        color.push_back( m_alpha );
+
+                        //Advance
+                        currPosition = nextPosition;
+                        currDirection = nextDirection;
+
+                        //Next position
+                        nextPosition = currPosition + ( m_step * currDirection );
+
+                        //Stepped voxels
+                        currVoxelx = (int)( floor(nextPosition.x / xVoxel) );
+                        currVoxely = (int)( floor(nextPosition.y / yVoxel) );
+                        currVoxelz = (int)( floor(nextPosition.z / zVoxel) );
+
+                        //Corresponding tensor number
+                        FirststicksNumber = sticksNumber;
+                        sticksNumber = currVoxelz * columns * rows + currVoxely * columns + currVoxelx;
+                        if( sticksNumber < m_pMaximasInfo->getMainDirData()->size())
+                        {
+                            absPeak = std::abs(m_pMaximasInfo->getMainDirData()->at(sticksNumber)[0] + m_pMaximasInfo->getMainDirData()->at(sticksNumber)[1] + m_pMaximasInfo->getMainDirData()->at(sticksNumber)[2]);
+
+                            if( absPeak == 0 || m_step*it > m_maxFiberLength) //Out of anatomy
+                            {
+                                break;
+                            }
+                
+                            sticks = m_pMaximasInfo->getMainDirData()->at(sticksNumber);
+                            sticks[0] *= flippedAxes.x;
+                            sticks[1] *= flippedAxes.y;
+                            sticks[2] *= flippedAxes.z;
+                            sticks[3] *= flippedAxes.x;
+                            sticks[4] *= flippedAxes.y;
+                            sticks[5] *= flippedAxes.z;
+                            sticks[6] *= flippedAxes.x;
+                            sticks[7] *= flippedAxes.y;
+                            sticks[8] *= flippedAxes.z;
+
+                            //Advection next direction
+                            nextDirection = advecIntegrateSheet( currDirection, sticks, FirststicksNumber, nextPosition, permutationID );
 
                             //Direction of seeding (backward of forward)
                             nextDirection *= bwdfwd;

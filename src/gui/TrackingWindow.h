@@ -27,6 +27,7 @@ public:
     TrackingWindow(){};
     TrackingWindow( wxWindow *pParent, MainFrame *pMf, wxWindowID id, const wxPoint &pos, const wxSize &size );
     TrackingWindow( wxWindow *pParent, MainFrame *pMf, wxWindowID id, const wxPoint &pos, const wxSize &size, int hardi);
+    TrackingWindow( wxWindow *pParent, MainFrame *pMf, wxWindowID id, const wxPoint &pos, const wxSize &size, bool sheet);
 
     ~TrackingWindow(){};
     void OnPaint( wxPaintEvent &event );
@@ -42,6 +43,7 @@ public:
     void OnSliderStepMoved                     ( wxCommandEvent& event );
     void OnSelectFileDTI                       ( wxCommandEvent& event );
     void OnSelectFileHARDI                     ( wxCommandEvent& event );
+    void OnSelectFileSheet                     ( wxCommandEvent& event );
     void OnRandomSeeding                       ( wxCommandEvent& event );
     void OnShellSeeding                        ( wxCommandEvent& event );
     void OnSelectMask                          ( wxCommandEvent& event );

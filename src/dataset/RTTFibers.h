@@ -27,14 +27,16 @@ public:
     void renderRTTFibers(bool bindBuffers, bool isPlaying, bool changeAlpha);
     void performDTIRTT( Vector seed, int bwdfwd, std::vector<float>& points, std::vector<float>& color );
     void performHARDIRTT( Vector seed, int bwdfwd, std::vector<float>& points, std::vector<float>& color );
+    void performSheetRTT( Vector seed, int bwdfwd, std::vector<float>& points, std::vector<float>& color );
     void setDiffusionAxis( const FMatrix &tensor, Vector& e1, Vector& e2, Vector& e3 );
-	std::vector<float> pickDirection(std::vector<float> initialPeaks, bool initWithDir, Vector currPos);
+	std::vector<float> pickDirection(std::vector<float> initialPeaks, bool initWithDir, Vector currPos, int& permute);
     bool withinMapThreshold(unsigned int sticksNumber, Vector pos);
 
     Vector generateRandomSeed( const Vector &min, const Vector &max );
     FMatrix trilinearInterp( float fx, float fy, float fz );
     Vector advecIntegrate( Vector vin, const FMatrix &tensor, Vector e1, Vector e2, Vector e3, float tensorNumber );
     Vector advecIntegrateHARDI( Vector vin, const std::vector<float> &sticks, float peaksNumber, Vector pos );
+    Vector advecIntegrateSheet( Vector vin, const std::vector<float> &sticks, float peaksNumber, Vector pos, int& permute );
     Vector magneticField( Vector vin, const std::vector<float> &sticks, float peaksNumber, Vector pos, Vector& vOut, float& F, float& G);
     
     void clearFibersRTT();
@@ -49,6 +51,7 @@ public:
     void setStep( float step )										  { m_step = step; }
     void setGMStep( float step )                                      { m_GMstep = step; }
     void setIsHardi( bool method )								      { m_isHARDI = method; }
+    void setIsSheet( bool method )								      { m_isSheet = method; }
     void setNbSeed ( float nbSeed )									  { m_nbSeed = nbSeed; }
     void setMinFiberLength( float minLength )						  { m_minFiberLength = minLength; }
     void setMaxFiberLength( float maxLength )						  { m_maxFiberLength = maxLength; }
@@ -84,8 +87,9 @@ public:
 	void insert(std::vector<Vector> pointsF, std::vector<Vector> pointsB, std::vector<Vector> colorF, std::vector<Vector> colorB);
 
     bool isHardiSelected()                       { return m_isHARDI;}
+    bool isSheetSelected()                       { return m_isSheet;}
     
-    wxString getRTTFileName()                    { if(m_isHARDI) 
+    wxString getRTTFileName()                    { if(m_isHARDI || m_isSheet) 
                                                         return m_pMaximasInfo->getPath(); 
                                                    else
                                                         return m_pTensorsInfo->getPath(); }
@@ -114,6 +118,7 @@ private:
     float       m_minFiberLength;
     float       m_maxFiberLength;
     bool        m_isHARDI;
+    bool        m_isSheet;
     float       m_countGMstep;
     Tensors     *m_pTensorsInfo;
     Maximas     *m_pMaximasInfo;
@@ -124,12 +129,13 @@ private:
 	Anatomy     *m_pSeedMapInfo;
     Anatomy     *m_pGMInfo;
     Vector       m_initVec;
+    std::vector<Vector> permutes;
 
     std::vector<float> m_streamlinesPoints; // Points to be rendered Forward
 	std::vector<float> m_streamlinesColors; //Color (local directions)Forward
 
     std::vector<float> m_storedDir;
-    
+    int m_storedPermute;
 
 	float m_alpha;
     int m_currentSeedBoxID;
