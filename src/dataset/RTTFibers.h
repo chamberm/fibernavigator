@@ -28,7 +28,7 @@ public:
     void renderRTTFibers(bool bindBuffers, bool isPlaying, bool changeAlpha);
     void performDTIRTT( Vector seed, int bwdfwd, std::vector<float>& points, std::vector<float>& color );
     void performHARDIRTT( Vector seed, int bwdfwd, std::vector<float>& points, std::vector<float>& color );
-    void performSheetRTT( Vector seed, int bwdfwd, std::vector<float>& points, std::vector<float>& color );
+    void performSheetRTT( Vector seed, int bwdfwd, std::vector<float>& points, std::vector<float>& color, bool backbone1 );
     void setDiffusionAxis( const FMatrix &tensor, Vector& e1, Vector& e2, Vector& e3 );
 	std::vector<float> pickDirection(std::vector<float> initialPeaks, bool initWithDir, Vector currPos, int& permute);
     bool withinMapThreshold(unsigned int sticksNumber, Vector pos);

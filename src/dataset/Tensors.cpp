@@ -340,8 +340,36 @@ void Tensors::drawGlyph( int i_zVoxel, int i_yVoxel, int i_xVoxel, AxisType i_ax
     getVoxelOffset( i_zVoxel, i_yVoxel, i_xVoxel, l_offset );
     ShaderHelper::getInstance()->getTensorsShader()->setUni3Float( "offset", l_offset );
 
-    // Lets set the color to draw this tensor.
+     // Lets set the color to draw this tensor.
     ShaderHelper::getInstance()->getTensorsShader()->setAttribFloat( "color", l_tensorFA );
+
+    //COLOR//display the main axis   
+
+            /*float lvx = m_tensorsMatrix[l_tensorNumber](0,0)*m_tensorsMatrix[l_tensorNumber](0,0)
+                + m_tensorsMatrix[l_tensorNumber](1,0)*m_tensorsMatrix[l_tensorNumber](1,0) 
+                + m_tensorsMatrix[l_tensorNumber](2,0)*m_tensorsMatrix[l_tensorNumber](2,0);
+            float lvy = m_tensorsMatrix[l_tensorNumber](0,1)*m_tensorsMatrix[l_tensorNumber](0,1)
+                + m_tensorsMatrix[l_tensorNumber](1,1)*m_tensorsMatrix[l_tensorNumber](1,1) 
+                + m_tensorsMatrix[l_tensorNumber](2,1)*m_tensorsMatrix[l_tensorNumber](2,1);
+            float lvz = m_tensorsMatrix[l_tensorNumber](0,2)*m_tensorsMatrix[l_tensorNumber](0,2)
+                + m_tensorsMatrix[l_tensorNumber](1,2)*m_tensorsMatrix[l_tensorNumber](1,2) 
+                + m_tensorsMatrix[l_tensorNumber](2,2)*m_tensorsMatrix[l_tensorNumber](2,2);
+            
+            if (lvx<lvy && lvx<lvz) 
+            {
+                glColor3f(1,0,0);
+            } 
+            else if (lvy<lvx && lvy<lvz) 
+            { 
+                glColor3f(0,1,0);
+            } 
+            else 
+            {  
+                glColor3f(0,0,1);
+            }*/
+
+   
+            
 
     // Set axis flip.
     GLfloat l_flippedAxes[3];
