@@ -221,7 +221,9 @@ void RTTFibers::seed()
                         vector<float> colorF;
                         vector<float> colorB;
 
-                        bool draw;
+                        
+
+                        bool draw = true;
 						m_stop = false;
                         
                         if(m_isHARDI)
@@ -244,13 +246,13 @@ void RTTFibers::seed()
                             {
                                 seed = generateRandomSeed(minCorner,maxCorner);
                             }
-                            performSheetRTT( seed,  1, pointsF, colorF, true); //First pass
+                            performSheetRTT( seed,  1, pointsF, colorF, true, 0); //First pass
                             stopSheetTracking = 0;
-                            performSheetRTT( seed,  -1, pointsB, colorB, true); //First pass
+                            performSheetRTT( seed,  -1, pointsB, colorB, true, 0); //First pass
 
                             if( (pointsF.size() + pointsB.size())/3 * getStep() > getMinFiberLength() && (pointsF.size() + pointsB.size())/3 * getStep() < getMaxFiberLength()+1 && (m_render || draw )&& (draw || m_and)) //
 						        {
-                                    
+  
                                     bool keepRight = false;
                                     bool keepLeft = false;
                                     //Insert strategically for drawArray methods.
@@ -268,6 +270,7 @@ void RTTFibers::seed()
                             
                                     if(pointsB.size() != 0)
                                     {
+
                                         m_nbPtsPerLine.push_back(pointsB.size()/3);
                                         m_linePointer.push_back(previousLinePointer + pointsB.size()/3);
                                         previousLinePointer = m_linePointer[m_lines+1];
@@ -295,19 +298,87 @@ void RTTFibers::seed()
                                     m_steppedOnceInsideChildBox = false;
                                     m_steppedOnceIntoAND = false;
 
+                                    std::vector<float> bone1 = pointsB;
+                                    bone1.insert(bone1.end(), pointsF.begin(), pointsF.end());
+
+                                    for(int bones=0; bones<bone1.size(); bones+=3)
+                                    {
+                                        //BACKBONE1
+                                        vector<float> pointsFbones;
+                                        vector<float> pointsBbones;
+                                        vector<float> colorFbones;
+                                        vector<float> colorBbones;
+                                        stopSheetTracking = 0;
+                                        Vector seed(bone1[bones],bone1[bones+1],bone1[bones+2]);
+
+                                        performSheetRTT( seed,  1, pointsFbones, colorFbones, false, 1); //First pass
+                                        stopSheetTracking = 0;
+                                        performSheetRTT( seed,  -1, pointsBbones, colorBbones, false, 1); //First pass
+
+                                        if( (pointsFbones.size() + pointsBbones.size())/3 * getStep() > getMinFiberLength() && (pointsFbones.size() + pointsBbones.size())/3 * getStep() < getMaxFiberLength()+1 && (m_render || draw )&& (draw || m_and)) //
+						                    {
+                                    
+                                                bool keepRight = false;
+                                                bool keepLeft = false;
+                                                //Insert strategically for drawArray methods.
+                                                if(pointsFbones.size() != 0)
+                                                {
+                                                    m_nbPtsPerLine.push_back(pointsFbones.size()/3);
+                                                    m_linePointer.push_back(previousLinePointer + pointsFbones.size()/3);
+                                                    previousLinePointer = m_linePointer[m_lines+1];
+                                                    m_lines++;
+
+                                                    m_streamlinesPoints.insert(m_streamlinesPoints.end(), pointsFbones.begin(), pointsFbones.end());
+                                                    m_streamlinesColors.insert(m_streamlinesColors.end(), colorFbones.begin(), colorFbones.end());
+                                                    keepRight = true;
+                                                }
+                            
+                                                if(pointsBbones.size() != 0)
+                                                {
+                                                    m_nbPtsPerLine.push_back(pointsBbones.size()/3);
+                                                    m_linePointer.push_back(previousLinePointer + pointsBbones.size()/3);
+                                                    previousLinePointer = m_linePointer[m_lines+1];
+                                                    m_lines++;
+
+                                                    m_streamlinesPoints.insert(m_streamlinesPoints.end(), pointsBbones.begin(), pointsBbones.end());
+                                                    m_streamlinesColors.insert(m_streamlinesColors.end(), colorBbones.begin(), colorBbones.end());
+                                                    keepLeft = true;
+                                                }
+
+                                                if(keepLeft && keepRight)
+                                                {
+                                                    m_LeftRightVector.push_back(true);
+                                                    m_LeftRightVector.push_back(true);
+                                                }
+                                                else if(keepLeft || keepRight)
+                                                {
+                                                    m_LeftRightVector.push_back(false);
+                                                }
+
+                                                if(RTTrackingHelper::getInstance()->isTractoDrivenRSN())
+                                                {
+                                                    insertPointsForTractoDriven(pointsFbones, pointsBbones);
+                                                }
+                                                m_steppedOnceInsideChildBox = false;
+                                                m_steppedOnceIntoAND = false;
+
+						                    }
+                                    }
 						        }
+
+                            
           //                  //BACKBONE2
                             vector<float> pointsF;
                             vector<float> pointsB;
                             vector<float> colorF;
                             vector<float> colorB;
 
-                            bool draw;
+                            bool draw = true;
 						    m_stop = false;
                             stopSheetTracking = 0;
-                            performSheetRTT( seed,  1, pointsF, colorF, false); //First pass
+                            performSheetRTT( seed,  1, pointsF, colorF, false, 0); //First pass
                             stopSheetTracking = 0;
-                            performSheetRTT( seed,  -1, pointsB, colorB, false); //First pass
+                            performSheetRTT( seed,  -1, pointsB, colorB, false, 0); //First pass
 
                             if( (pointsF.size() + pointsB.size())/3 * getStep() > getMinFiberLength() && (pointsF.size() + pointsB.size())/3 * getStep() < getMaxFiberLength()+1 && (m_render || draw )&& (draw || m_and)) //
 						        {
@@ -355,6 +426,73 @@ void RTTFibers::seed()
                                     }
                                     m_steppedOnceInsideChildBox = false;
                                     m_steppedOnceIntoAND = false;
+
+                                    std::vector<float> bone1 = pointsB;
+                                    bone1.insert(bone1.end(), pointsF.begin(), pointsF.end());
+
+                                    for(int bones=0; bones<bone1.size(); bones+=3)
+                                    {
+                                        //BACKBONE1
+                                        vector<float> pointsFbones;
+                                        vector<float> pointsBbones;
+                                        vector<float> colorFbones;
+                                        vector<float> colorBbones;
+                                        stopSheetTracking = 0;
+                                        Vector seed(bone1[bones],bone1[bones+1],bone1[bones+2]);
+
+                                        performSheetRTT( seed,  1, pointsFbones, colorFbones, true, 2); //First pass
+                                        stopSheetTracking = 0;
+                                        performSheetRTT( seed,  -1, pointsBbones, colorBbones, true, 2); //First pass
+
+                                        if( (pointsFbones.size() + pointsBbones.size())/3 * getStep() > getMinFiberLength() && (pointsFbones.size() + pointsBbones.size())/3 * getStep() < getMaxFiberLength()+1 && (m_render || draw )&& (draw || m_and)) //
+						                    {
+                                    
+                                                bool keepRight = false;
+                                                bool keepLeft = false;
+                                                //Insert strategically for drawArray methods.
+                                                if(pointsFbones.size() != 0)
+                                                {
+                                                    m_nbPtsPerLine.push_back(pointsFbones.size()/3);
+                                                    m_linePointer.push_back(previousLinePointer + pointsFbones.size()/3);
+                                                    previousLinePointer = m_linePointer[m_lines+1];
+                                                    m_lines++;
+
+                                                    m_streamlinesPoints.insert(m_streamlinesPoints.end(), pointsFbones.begin(), pointsFbones.end());
+                                                    m_streamlinesColors.insert(m_streamlinesColors.end(), colorFbones.begin(), colorFbones.end());
+                                                    keepRight = true;
+                                                }
+                            
+                                                if(pointsBbones.size() != 0)
+                                                {
+                                                    m_nbPtsPerLine.push_back(pointsBbones.size()/3);
+                                                    m_linePointer.push_back(previousLinePointer + pointsBbones.size()/3);
+                                                    previousLinePointer = m_linePointer[m_lines+1];
+                                                    m_lines++;
+
+                                                    m_streamlinesPoints.insert(m_streamlinesPoints.end(), pointsBbones.begin(), pointsBbones.end());
+                                                    m_streamlinesColors.insert(m_streamlinesColors.end(), colorBbones.begin(), colorBbones.end());
+                                                    keepLeft = true;
+                                                }
+
+                                                if(keepLeft && keepRight)
+                                                {
+                                                    m_LeftRightVector.push_back(true);
+                                                    m_LeftRightVector.push_back(true);
+                                                }
+                                                else if(keepLeft || keepRight)
+                                                {
+                                                    m_LeftRightVector.push_back(false);
+                                                }
+
+                                                if(RTTrackingHelper::getInstance()->isTractoDrivenRSN())
+                                                {
+                                                    insertPointsForTractoDriven(pointsFbones, pointsBbones);
+                                                }
+                                                m_steppedOnceInsideChildBox = false;
+                                                m_steppedOnceIntoAND = false;
+
+						                    }
+                                    }
 
 						        }
 						    
@@ -1460,97 +1598,69 @@ void RTTFibers::performDTIRTT(Vector seed, int bwdfwd, vector<float>& points, ve
 std::vector<float> RTTFibers::pickDirection(std::vector<float> initialPeaks, bool initWithDir, Vector currPos, int& permute)
 {
     std::vector<float> draftedPeak;
-    if(!initWithDir)
+
+	unsigned int nbPeaks = initialPeaks.size()/3;
+	std::vector<float> norms;
+	float sum = 0.0f;
+
+	for(unsigned int i=0; i < nbPeaks; i++)
     {
-	    unsigned int nbPeaks = initialPeaks.size()/3;
-	    std::vector<float> norms;
-	    float sum = 0.0f;
+        Vector v1(initialPeaks[i*3],initialPeaks[i*3+1], initialPeaks[i*3+2]);
+        norms.push_back(v1.getLength());
+		sum += norms[i];
+	}
 
-	    for(unsigned int i=0; i < nbPeaks; i++)
-        {
-            Vector v1(initialPeaks[i*3],initialPeaks[i*3+1], initialPeaks[i*3+2]);
-            norms.push_back(v1.getLength());
-		    sum += norms[i];
-	    }
-    
-	    float random = ( (float) rand() ) / (float) RAND_MAX;
-        float weight = ( random * sum );
+    if(norms[2] != 0)
+    {
+        double x = rand()/static_cast<double>(RAND_MAX+1);
+        int that = 1 + static_cast<int>(x* (3-1) );
 
-	    if(weight < norms[0])
-	    {
-		    draftedPeak.push_back(initialPeaks[0]);
-		    draftedPeak.push_back(initialPeaks[1]);
-		    draftedPeak.push_back(initialPeaks[2]);
-            permute = 0;
-	    }
-	    else if(weight < norms[0] + norms[1] && norms[1] > 0)
-	    {
-		    draftedPeak.push_back(initialPeaks[3]);
-		    draftedPeak.push_back(initialPeaks[4]);
-		    draftedPeak.push_back(initialPeaks[5]);
-            permute = 1;
-	    }
-	    else if(norms[2] > 0)
-	    {
-		    draftedPeak.push_back(initialPeaks[6]);
-		    draftedPeak.push_back(initialPeaks[7]);
-		    draftedPeak.push_back(initialPeaks[8]);
-            permute = 2;
-	    }
-        else
+        if(that == 1)
         {
             draftedPeak.push_back(initialPeaks[0]);
-		    draftedPeak.push_back(initialPeaks[1]);
-		    draftedPeak.push_back(initialPeaks[2]);
+            draftedPeak.push_back(initialPeaks[1]);
+            draftedPeak.push_back(initialPeaks[2]);
+            draftedPeak.push_back(initialPeaks[3]);
+            draftedPeak.push_back(initialPeaks[4]);
+            draftedPeak.push_back(initialPeaks[5]);
             permute = 0;
+            m_storedPerm2 = 1;
+        }
+        else if(that == 2)
+        {
+            draftedPeak.push_back(initialPeaks[0]);
+            draftedPeak.push_back(initialPeaks[1]);
+            draftedPeak.push_back(initialPeaks[2]);
+            draftedPeak.push_back(initialPeaks[6]);
+            draftedPeak.push_back(initialPeaks[7]);
+            draftedPeak.push_back(initialPeaks[8]);
+            permute = 0;
+            m_storedPerm2 = 2;
+        }
+        else
+        {
+            draftedPeak.push_back(initialPeaks[3]);
+            draftedPeak.push_back(initialPeaks[4]);
+            draftedPeak.push_back(initialPeaks[5]);
+            draftedPeak.push_back(initialPeaks[6]);
+            draftedPeak.push_back(initialPeaks[7]);
+            draftedPeak.push_back(initialPeaks[8]);
+            permute = 1;
+            m_storedPerm2 = 2;
         }
     }
     else
     {
-        Vector vOut(0,0,0);
-        float angleMin = 360.0f;
-        float angle = 0.0f;
-        float puncture = m_vinvout;
-	     
-
-        for(unsigned int i=0; i < initialPeaks.size()/3; i++)
-        {
-            Vector v1(initialPeaks[i*3],initialPeaks[i*3+1], initialPeaks[i*3+2]);
-            v1.normalize();
-        
-            if( m_initVec.Dot(v1) < 0 ) //Ensures both vectors points in the same direction
-            {
-                v1 *= -1;
-            }
-
-            //Angle value
-            float dot = m_initVec.Dot(v1);
-            float acos = std::acos( dot );
-            angle = 180 * acos / M_PI;
-        
-            //Direction most probable
-            if( angle < angleMin )
-            {
-                angleMin = angle;
-                vOut = v1;
-            }     
-        }
-        draftedPeak.push_back(vOut.x);
-        draftedPeak.push_back(vOut.y);
-        draftedPeak.push_back(vOut.z);
+        draftedPeak.push_back(initialPeaks[0]);
+        draftedPeak.push_back(initialPeaks[1]);
+        draftedPeak.push_back(initialPeaks[2]);
+        draftedPeak.push_back(initialPeaks[3]);
+        draftedPeak.push_back(initialPeaks[4]);
+        draftedPeak.push_back(initialPeaks[5]);
+        permute = 0;
+        m_storedPerm2 = 1;
     }
 
-   /* bool isMagnetOn = RTTrackingHelper::getInstance()->isMagnetOn();
-    if(isMagnetOn)
-    {
-        Vector def(0,0,0);
-        float F = 0;
-        Vector res = magneticField(def, initialPeaks, 0, currPos, def, F); 
-        draftedPeak[0] = res.x;
-        draftedPeak[1] = res.y;
-        draftedPeak[2] = res.z;
-    }*/
-		//std::cout<<"OUA";
 	return draftedPeak;
 }
 
@@ -1878,7 +1988,7 @@ void RTTFibers::performHARDIRTT(Vector seed, int bwdfwd, vector<float>& points, 
 ///////////////////////////////////////////////////////////////////////////
 // Performs realtime HARDI fiber tracking along direction bwdfwd (backward, forward)
 ///////////////////////////////////////////////////////////////////////////
-void RTTFibers::performSheetRTT(Vector seed, int bwdfwd, vector<float>& points, vector<float>& color, bool backbone1)
+void RTTFibers::performSheetRTT(Vector seed, int bwdfwd, vector<float>& points, vector<float>& color, bool backbone1, int reseed)
 { 
     
 
@@ -1920,40 +2030,80 @@ void RTTFibers::performSheetRTT(Vector seed, int bwdfwd, vector<float>& points, 
         {
             bool initWithDir = RTTrackingHelper::getInstance()->isInitSeed();
 
-            if(backbone1)
+            if(reseed ==0)
             {
-                if(bwdfwd != -1)
+                if(backbone1)
                 {
-                    /*sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[0]);
-                    sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[1]);
-                    sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[2]);*/
-                    sticks= pickDirection(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber), initWithDir, currPosition, permutationID); 
-                    m_storedDir = sticks;
-                    m_storedPermute = permutationID;
+                    if(bwdfwd != -1)
+                    {
+                        /*sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[0]);
+                        sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[1]);
+                        sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[2]);*/
+                        sticks= pickDirection(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber), initWithDir, currPosition, permutationID); 
+                        m_storedDir = sticks;
+                        m_storedPermute = permutationID;
+                    }
+                    else
+                    { 
+                        sticks = m_storedDir;
+                        permutationID = m_storedPermute;
+                    }
                 }
                 else
-                { 
-                    sticks = m_storedDir;
-                    permutationID = m_storedPermute;
+                {
+                    sticks.push_back(m_storedDir[3]);
+                    sticks.push_back(m_storedDir[4]);
+                    sticks.push_back(m_storedDir[5]);
+                    permutationID = m_storedPerm2;
                 }
             }
             else
             {
-                if(std::abs(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[3]+m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[4]+m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[5]) !=0)
+                sticks.push_back(0);
+                sticks.push_back(0);
+                sticks.push_back(0);
+
+                float angleMin = 360.0f;
+                float angle = 0.0f;
+                std::vector<float> peaks = m_pMaximasInfo->getMainDirData()->at(FirststicksNumber);
+                Vector bb;
+                if(reseed == 1)
                 {
-                    sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[3]);
-                    sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[4]);
-                    sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[5]);
-                    permutationID = 1;
+                    bb=Vector(m_storedDir[3],m_storedDir[4],m_storedDir[5]);
+                    bb.normalize();
                 }
                 else
                 {
-                    sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[0]);
-                    sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[1]);
-                    sticks.push_back(m_pMaximasInfo->getMainDirData()->at(FirststicksNumber)[2]);
-                    permutationID = 0;
+                   bb=Vector(m_storedDir[0],m_storedDir[1],m_storedDir[2]);
+                   bb.normalize();
                 }
+                for(unsigned int i=0; i < peaks.size()/3; i++)
+                {
+                    Vector v1(peaks[i*3],peaks[i*3+1], peaks[i*3+2]);
+            
+                    if(v1.normalizeAndReturn() != 0)
+                    {
+                        if( bb.Dot(v1) < 0 ) //Ensures both vectors points in the same direction
+                        {
+                            v1 *= -1;
+                        }
 
+                        //Angle value
+                        float dot = bb.Dot(v1);
+                        float acos = std::acos( dot );
+                        angle = 180 * acos / M_PI;
+        
+                        //Direction most probable
+                        if( angle < angleMin )
+                        {
+                            angleMin = angle;
+                            sticks[0] = v1.x;
+                            sticks[1] = v1.y;
+                            sticks[2] = v1.z;
+                            permutationID = i;
+                        } 
+                    }
+                }
             }
 
             currDirection.x = flippedAxes.x * sticks[0];
@@ -2038,7 +2188,7 @@ void RTTFibers::performSheetRTT(Vector seed, int bwdfwd, vector<float>& points, 
 
                         //Next position
                         nextPosition = currPosition + ( m_step * currDirection );
-
+                         
                         //Stepped voxels
                         currVoxelx = (int)( floor(nextPosition.x / xVoxel) );
                         currVoxely = (int)( floor(nextPosition.y / yVoxel) );
