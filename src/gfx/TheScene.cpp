@@ -19,6 +19,7 @@
 #include "../dataset/DatasetManager.h"
 #include "../dataset/RTTrackingHelper.h"
 #include "../dataset/RTFMRIHelper.h"
+#include "../dataset/ConnectomeHelper.h"
 #include "../dataset/Fibers.h"
 #include "../dataset/Mesh.h"
 #include "../dataset/ODFs.h"
@@ -381,6 +382,11 @@ void TheScene::renderScene()
 		DatasetManager::getInstance()->m_pRestingStateNetwork->render3D(move);
 		DatasetManager::getInstance()->m_pRestingStateNetwork->setBoxMoving(false);
 	}
+
+    if(ConnectomeHelper::getInstance()->isReady())
+    {
+        ConnectomeHelper::getInstance()->getConnectome()->renderGraph();
+    }
 
     if( SceneManager::getInstance()->getShowAllSelObj() && m_pRealTimeFibers->getOpacity() == 1)
     {

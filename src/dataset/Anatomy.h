@@ -66,6 +66,7 @@ public:
     void add( Anatomy* anatomy);
 
     float at( const int i ) const;
+    float atNonNorm( const int i ) const;
     unsigned int getSize() { return m_floatDataset.size(); }
     std::vector<float>* getFloatDataset();
     std::vector<float>* getEqualizedDataset();
@@ -176,6 +177,7 @@ private:
     float                   m_floodThreshold;
     float                   m_graphSigma;
     std::vector<float>      m_floatDataset;
+    std::vector<float>      m_floatNonNormDataset;
     std::vector<float>      m_equalizedDataset; // Dataset having its histogram equalized
     int                     m_dataType;
     TensorField             *m_pTensorField;

@@ -266,6 +266,13 @@ float Anatomy::at( const int pos ) const
 
 //////////////////////////////////////////////////////////////////////////
 
+float Anatomy::atNonNorm( const int pos ) const
+{
+    return m_floatNonNormDataset[pos];
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 std::vector< float >* Anatomy::getFloatDataset()
 {
     return &m_floatDataset;
@@ -780,10 +787,12 @@ bool Anatomy::load( nifti_image *pHeader, nifti_image *pBody )
         {
             unsigned char* pData = (unsigned char*)pBody->data;
             m_floatDataset.resize( datasetSize );
+            m_floatNonNormDataset.resize( datasetSize );
 
             for( int i(0); i < datasetSize; ++i )
             {
                 m_floatDataset[i] = (float)pData[i] / 255.0;
+                m_floatNonNormDataset[i] = (float)pData[i];
             }
 
             flag = true;
@@ -827,10 +836,12 @@ bool Anatomy::load( nifti_image *pHeader, nifti_image *pBody )
             }
 
             m_floatDataset.resize( datasetSize );
+            m_floatNonNormDataset.resize( datasetSize );
 
             for( int i(0); i < datasetSize; ++i )
             {
                 m_floatDataset[i] = (float)pData[i] / (float)newMax;
+                m_floatNonNormDataset[i] = (float)pData[i];
             }
 
             m_oldMax    = dataMax;
@@ -844,10 +855,12 @@ bool Anatomy::load( nifti_image *pHeader, nifti_image *pBody )
             float* pData = (float*)pBody->data;
 
             m_floatDataset.resize( datasetSize );
+            m_floatNonNormDataset.resize( datasetSize );
             
             for( int i(0); i < datasetSize; ++i )
             {
                 m_floatDataset[i] = (float)pData[i];
+                m_floatNonNormDataset[i] = (float)pData[i];
             }
 
             float dataMax = 0.0f;
