@@ -383,9 +383,14 @@ void TheScene::renderScene()
 		DatasetManager::getInstance()->m_pRestingStateNetwork->setBoxMoving(false);
 	}
 
-    if(ConnectomeHelper::getInstance()->isReady())
+    if(ConnectomeHelper::getInstance()->isLabelsReady() && ConnectomeHelper::getInstance()->isDirty())
     {
-        ConnectomeHelper::getInstance()->getConnectome()->renderGraph();
+        ConnectomeHelper::getInstance()->getConnectome()->renderNodes();
+    }
+
+    if(ConnectomeHelper::getInstance()->isEdgesReady() && ConnectomeHelper::getInstance()->isDirty())
+    {
+        ConnectomeHelper::getInstance()->getConnectome()->renderEdges();
     }
 
     if( SceneManager::getInstance()->getShowAllSelObj() && m_pRealTimeFibers->getOpacity() == 1)
