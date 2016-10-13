@@ -9,7 +9,8 @@ m_isLabelsSelected( false ),
 m_isEdgesSelected( false ),
 m_isLabelsReady( false ),
 m_isEdgesReady( false ),
-m_isDirty( true )
+m_isDirty( true ),
+m_Nodecolor( wxColour( 255, 0, 0 ) )
 {
     m_Connectome = new Connectome();
 }

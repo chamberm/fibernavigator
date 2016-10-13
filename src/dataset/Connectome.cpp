@@ -65,8 +65,19 @@ Connectome::~Connectome()
     Logger::getInstance()->print( wxT( "Connectome destructor called but nothing to do." ), LOGLEVEL_DEBUG );
 }
 
+void Connectome::clearConnectome()
+{
+    Edges.clear();
+    nodeDegree.clear();
+    m_labelHist.clear();
+    Nodes.clear();
+    ConnectomeHelper::getInstance()->setEdgesReady(false);
+    ConnectomeHelper::getInstance()->setLabelsReady(false);
+      
+}
 void Connectome::setLabels(Anatomy *labels)
 {
+
     std::cout << "Nb labels: " << m_NbLabels << std::endl;
     m_labels = labels;
     m_labelHist.resize( m_NbLabels );
@@ -120,6 +131,7 @@ void Connectome::setLabels(Anatomy *labels)
 
 void Connectome::setEdges(Fibers *edges)
 {
+
     m_fibers = edges;
     int nbFibers = m_fibers->getFibersCount();
 
@@ -189,22 +201,24 @@ void Connectome::setEdges(Fibers *edges)
         }
     }
 
-    for(unsigned int i=0; i<nodeDegree.size();i++)
+    for (unsigned int i=0; i<Edges.size();i++)
     {
+        //normalize edge for visualization
+        for (unsigned int j=0; j<Edges[i].size(); j++)
+        {
+            if(Edges[i][j] !=0 && i!=j)
+            {
+                Edges[i][j] = (Edges[i][j] - m_Edgemin)/(m_Edgemax-m_Edgemin);
+            }
+        }
+
+        //Normalize node degree for visualization
         int tmpMax = nodeDegree[i];
         if(tmpMax > m_NodeDegreeMax)
         {
             m_NodeDegreeMax = tmpMax;
         }
     }
-
-    //for (unsigned int i=0; i<Edges.size();i++)
-    //{
-    //    for (unsigned int j=0; j<Edges[i].size(); j++)
-    //    {
-    //        Edges[i][j] = (Edges[i][j] - m_Edgemin)/(m_Edgemax-m_Edgemin);
-    //    }
-    //}
     std::cout << "Edge min.: " << m_Edgemin << " " << "Edge max.: " << m_Edgemax << std::endl;
     ConnectomeHelper::getInstance()->setEdgesReady(true);
     //renderGraph();
@@ -228,7 +242,8 @@ void Connectome::renderNodes()
                 glDepthMask( GL_FALSE );
             }
             //nodes
-            glColor4f( 1.0f, 0.0f, 0.0f, m_nodeAlpha );
+            wxColor color = ConnectomeHelper::getInstance()->getNodeColor();
+            glColor4f( (float)color.Red() / 255.0f, (float)color.Green() / 255.0f, (float)color.Blue() / 255.0f, m_nodeAlpha );
 
             float size = m_nodeSize;
             if(ConnectomeHelper::getInstance()->isEdgesReady())
@@ -262,11 +277,40 @@ void Connectome::renderEdges()
         {
             if(Edges[i][j] !=0)
             {
+                float alphaValue = m_edgeAlpha;
+			    float R,G,B;
+                float v = Edges[i][j];
+                float edgeSize;
+			    if(v < 0.33f)
+			    {
+                    R = 0.0f;
+                    G = (v/0.25f);
+                    B = 1.0f;
+                    edgeSize = 0;
+                    alphaValue = 0.1f;
+			    }
+                else if(v > 0.33f && v < 0.66f)
+                {
+				    R = (v-0.33f)/(0.66f-0.33f);
+				    G = 1.0f - (v-0.33f)/(0.66f-0.33f);
+				    B = 1.0f;
+                    edgeSize = 1;
+                    alphaValue = 0.8f;
+			    }
+                else
+                {
+                    R = 1.0f;
+				    G = 1.0f-((v-0.66f)/(1.0f-0.66f));
+				    B = 1.0f-((v-0.66f)/(1.0f-0.66f));
+                    edgeSize = 2;
+                    alphaValue = 1.0f;
+                }
+                
                 //Local vector
                 Vector normalVector = Vector(Nodes[i].x-Nodes[j].x,Nodes[i].y-Nodes[j].y,Nodes[i].z-Nodes[j].z);
                 normalVector.normalize();
 
-                float alphaValue;
+                
                 if(m_isOrientationDep)
                 {
                     //View vector
@@ -286,36 +330,6 @@ void Connectome::renderEdges()
 				    alphaValue = 1-std::abs(normalVector.Dot(zVector)); 
                     alphaValue = std::pow(alphaValue,3.0f);
                 }
-                else
-                {
-                    alphaValue = m_edgeAlpha;//*Edges[i][j]+0.1f;
-                }
-
-			    float R,G,B;
-
-                float mid = (m_Edgemin + m_Edgemax) * 0.5f;
-			    //float quart = 1.0f* (m_Edgemin + m_Edgemax) * 0.25f;
-			    //float trois_quart = 3.0f* (m_Edgemin + m_Edgemax) * 0.25f;
-                float edgeSize;
-			    if(Edges[i][j] < mid)
-			    {
-                    R = 1.0f;
-                    G = 0.0f;
-                    B = 0.0f;
-                    //R = 1.0f;
-				    //G = 1.0f-(Edges[i][j] - mid) / (m_Edgemax - mid);
-				    //B = 1.0f-(Edges[i][j] - mid) / (m_Edgemax - mid);
-                    //edgeSize = 4;
-                    //alphaValue = 1.0f;
-			    }
-                else
-                {
-				    R = 0.0f;
-				    G = 1.0f;
-				    B = 1.0f;
-                    //edgeSize = 1;
-                    //alphaValue = 0.1f;
-			    }
 
                 if(alphaValue != 1.0f)
 		        {
@@ -327,9 +341,9 @@ void Connectome::renderEdges()
                 }
 
                 glPushAttrib(GL_LINE_WIDTH);
-                glLineWidth(m_edgeSize); 
+                glLineWidth(edgeSize+m_edgeSize); 
                     
-                glColor4f( R,G,B, m_edgeAlpha);
+                glColor4f( R,G,B, alphaValue*m_edgeAlpha);
                 glBegin( GL_LINES );
                     glVertex3f( Nodes[i].x, Nodes[i].y, Nodes[i].z );
                     glVertex3f( Nodes[j].x, Nodes[j].y, Nodes[j].z );

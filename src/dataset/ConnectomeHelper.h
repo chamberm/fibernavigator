@@ -22,6 +22,9 @@ public:
     
     bool isDirty() const     { return m_isDirty; }
     void setDirty( bool dirty )          { m_isDirty = dirty; }
+
+    void setNodeColor ( wxColour color )         { m_Nodecolor  = color; };
+    wxColour getNodeColor() const                    { return m_Nodecolor;   };
     
     Connectome* getConnectome() { return m_Connectome; }
     
@@ -41,6 +44,7 @@ private:
     bool m_isLabelsReady;
     bool m_isEdgesReady;
     bool m_isDirty;
+    wxColour m_Nodecolor;
    
 
 };

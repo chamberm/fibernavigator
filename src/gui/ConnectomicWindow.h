@@ -39,6 +39,9 @@ public:
     void OnSliderDisplayMoved          ( wxCommandEvent& event );
     void OnToggleFlashyEdges           ( wxCommandEvent& event );
     void OnToggleOrientationDep        ( wxCommandEvent& event );
+    void onClearConnectome             ( wxCommandEvent& event );
+    void OnAssignColorNode             ( wxCommandEvent& event );
+    bool SelectColor                        ( wxColour &col );
 	
 	
 	
@@ -65,6 +68,9 @@ private:
 
     wxToggleButton		*m_pToggleFlashyEdges;
     wxToggleButton      *m_pToggleOrientationDep;
+
+    wxButton            *m_pBtnClearConnectome;
+    wxBitmapButton      *m_pbtnSelectColor;
 	
     
 private:

@@ -36,6 +36,8 @@ public:
     void renderNodes();
     void renderEdges();
 
+    void clearConnectome();
+
 	
 private:
     

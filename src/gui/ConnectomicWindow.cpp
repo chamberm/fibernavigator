@@ -10,6 +10,7 @@
 #include <wx/grid.h>
 #include <wx/tglbtn.h>
 #include <wx/treectrl.h>
+#include <wx/colordlg.h>
 
 
 IMPLEMENT_DYNAMIC_CLASS( ConnectomicWindow, wxScrolledWindow )
@@ -27,11 +28,11 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
     SetSizer( m_pConnectomicSizer );
     SetAutoLayout( true );
 
-    m_pNbLabels  = new wxTextCtrl( this, wxID_ANY, wxString::Format( wxT( "%i" ), 161 ), wxDefaultPosition, wxSize( 100, -1 ) );
+    m_pNbLabels  = new wxTextCtrl( this, wxID_ANY, wxString::Format( wxT( "%i" ), 161 ), wxDefaultPosition, wxSize( 75, -1 ) );
     Connect( m_pNbLabels->GetId(),  wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ConnectomicWindow::OnNbLabels ) );
 
-    wxBoxSizer *pBoxRow2 = new wxBoxSizer( wxVERTICAL );
-    pBoxRow2->Add( new wxStaticText( this, wxID_ANY, wxT( "Number of labels" ) ), 0, wxALIGN_CENTER_HORIZONTAL | wxALL, 1 );
+    wxBoxSizer *pBoxRow2 = new wxBoxSizer( wxHORIZONTAL );
+    pBoxRow2->Add( new wxStaticText( this, wxID_ANY, wxT("Number of labels"), wxDefaultPosition, wxSize(110, -1), wxALIGN_CENTER ), 0, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL | wxALL, 1 );
 	pBoxRow2->Add( m_pNbLabels, 0, wxALIGN_CENTER | wxALL, 1 );
 	m_pConnectomicSizer->Add( pBoxRow2, 0, wxFIXED_MINSIZE | wxEXPAND, 0 );
 
@@ -43,9 +44,14 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
 	Connect( m_pBtnSelectEdges->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::onSelectEdges) );
     m_pBtnSelectEdges->SetBackgroundColour(wxColour( 255, 147, 147 ));
 
+    m_pBtnClearConnectome = new wxButton( this, wxID_ANY,wxT("Clear Connectome"), wxDefaultPosition, wxSize(230, -1) );
+	Connect( m_pBtnClearConnectome->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::onClearConnectome) );
+
 	wxBoxSizer *pBoxRow1 = new wxBoxSizer( wxVERTICAL );
 	pBoxRow1->Add( m_pBtnSelectLabels, 0, wxALIGN_CENTER | wxALL, 1 );
     pBoxRow1->Add( m_pBtnSelectEdges, 0, wxALIGN_CENTER | wxALL, 1 );
+    pBoxRow1->Add( m_pBtnClearConnectome, 0, wxALIGN_CENTER | wxALL, 1 );
+    //pBoxRow1->Add( new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxSize(230,-1),wxHORIZONTAL,wxT("Separator")), 0, wxALIGN_RIGHT | wxALL, 1 );
 	m_pConnectomicSizer->Add( pBoxRow1, 0, wxFIXED_MINSIZE | wxEXPAND, 0 );
 
     m_pTextNodeSize = new wxStaticText( this, wxID_ANY, wxT("Node size"), wxDefaultPosition, wxSize(70, -1), wxALIGN_CENTER );
@@ -61,14 +67,19 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
 	m_pConnectomicSizer->Add( pBoxRow3, 0, wxFIXED_MINSIZE | wxEXPAND, 0 );
 
 	m_pTextNodeAlpha = new wxStaticText( this, wxID_ANY, wxT("Node Alpha"), wxDefaultPosition, wxSize(70, -1), wxALIGN_CENTER );
-	m_pSliderNodeAlpha = new MySlider( this, wxID_ANY, 0, 0, 100, wxDefaultPosition, wxSize(100, -1), wxSL_HORIZONTAL | wxSL_AUTOTICKS );
+	m_pSliderNodeAlpha = new MySlider( this, wxID_ANY, 0, 0, 100, wxDefaultPosition, wxSize(60, -1), wxSL_HORIZONTAL | wxSL_AUTOTICKS );
 	m_pSliderNodeAlpha->SetValue( 50 );
 	Connect( m_pSliderNodeAlpha->GetId(), wxEVT_COMMAND_SLIDER_UPDATED, wxCommandEventHandler(ConnectomicWindow::OnSliderDisplayMoved) );
     m_pTxtNodeAlphaBox = new wxTextCtrl( this, wxID_ANY, wxT("0.5"), wxDefaultPosition, wxSize(55, -1), wxTE_CENTRE | wxTE_READONLY );
 
+    wxImage bmpColor(MyApp::iconsPath+ wxT("colorSelect.png" ), wxBITMAP_TYPE_PNG);
+    m_pbtnSelectColor = new wxBitmapButton(this, wxID_ANY, bmpColor, wxDefaultPosition, wxSize(40,-1));
+    Connect(m_pbtnSelectColor->GetId(),wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConnectomicWindow::OnAssignColorNode ));
+
 	wxBoxSizer *pBoxRow4 = new wxBoxSizer( wxHORIZONTAL );
     pBoxRow4->Add( m_pTextNodeAlpha, 0, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL | wxALL, 1 );
     pBoxRow4->Add( m_pSliderNodeAlpha,   0, wxALIGN_CENTER | wxEXPAND | wxALL, 1);
+    pBoxRow4->Add( m_pbtnSelectColor,   0, wxALIGN_CENTER | wxALL, 1);
 	pBoxRow4->Add( m_pTxtNodeAlphaBox,   0, wxALIGN_CENTER | wxALL, 1);
 	m_pConnectomicSizer->Add( pBoxRow4, 0, wxFIXED_MINSIZE | wxEXPAND, 0 );
 
@@ -96,16 +107,31 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
 	pBoxRow6->Add( m_pTxtEdgeAlphaBox,   0, wxALIGN_CENTER | wxALL, 1);
 	m_pConnectomicSizer->Add( pBoxRow6, 0, wxFIXED_MINSIZE | wxEXPAND, 0 );
 
-    m_pToggleFlashyEdges = new wxToggleButton( this, wxID_ANY,wxT("Flashy edges OFF"), wxDefaultPosition, wxSize(115, -1) );
+    m_pToggleFlashyEdges = new wxToggleButton( this, wxID_ANY,wxT("Flashy edges OFF"), wxDefaultPosition, wxSize(120, -1) );
     Connect( m_pToggleFlashyEdges->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::OnToggleFlashyEdges) );
 
-    m_pToggleOrientationDep = new wxToggleButton( this, wxID_ANY,wxT("Orient. Dep. OFF"), wxDefaultPosition, wxSize(115, -1) );
+    m_pToggleOrientationDep = new wxToggleButton( this, wxID_ANY,wxT("Orient. Dep. OFF"), wxDefaultPosition, wxSize(120, -1) );
     Connect( m_pToggleOrientationDep->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::OnToggleOrientationDep) );
 
     wxBoxSizer *pBoxRow7 = new wxBoxSizer( wxHORIZONTAL );
-	pBoxRow7->Add( m_pToggleFlashyEdges, 0, wxALIGN_CENTER | wxALL, 1 );
+	pBoxRow7->Add( m_pToggleFlashyEdges, 0, wxALIGN_RIGHT | wxALL, 1 );
     pBoxRow7->Add( m_pToggleOrientationDep, 0, wxALIGN_CENTER | wxALL, 1 );
-	m_pConnectomicSizer->Add( pBoxRow7, 0, wxFIXED_MINSIZE | wxEXPAND, 0 );
+    //pBoxRow7->Add( new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxSize(230,-1),wxHORIZONTAL,wxT("Separator")), 0, wxALIGN_RIGHT | wxALL, 1 );
+	m_pConnectomicSizer->Add( pBoxRow7, 0,  wxFIXED_MINSIZE | wxALL, 2 );
+
+    wxTextCtrl *metricZone = new wxTextCtrl( this, wxID_ANY, wxT("Graph metrics"), wxDefaultPosition, wxSize(230, -1), wxTE_CENTER | wxTE_READONLY );
+    metricZone->SetBackgroundColour( *wxLIGHT_GREY );
+    wxFont metric_font = metricZone->GetFont();
+    metric_font.SetPointSize( 10 );
+    metric_font.SetWeight( wxFONTWEIGHT_BOLD );
+    metricZone->SetFont( metric_font );
+
+	wxBoxSizer *pBoxMetricZone = new wxBoxSizer( wxVERTICAL );
+    pBoxMetricZone->Add( new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxSize(230,-1),wxHORIZONTAL,wxT("Separator")), 0, wxALIGN_RIGHT | wxALL, 1 );
+	pBoxMetricZone->Add( metricZone,   0, wxALIGN_CENTER | wxALL, 1);
+	m_pConnectomicSizer->Add( pBoxMetricZone, 0, wxFIXED_MINSIZE | wxALL, 2 );
+
+    
 
 }
 
@@ -156,6 +182,19 @@ void ConnectomicWindow::onSelectEdges( wxCommandEvent& event )
     }
 }
 
+void ConnectomicWindow::onClearConnectome( wxCommandEvent& event )
+{
+    
+    ConnectomeHelper::getInstance()->getConnectome()->clearConnectome();
+
+	m_pBtnSelectLabels->SetLabel( wxT( "Labels not selected") );
+    m_pBtnSelectLabels->SetBackgroundColour(wxColour(255, 147, 147));
+    
+    m_pBtnSelectEdges->SetLabel( wxT( "Tracts not selected") );
+    m_pBtnSelectEdges->SetBackgroundColour(wxColour(255, 147, 147));
+
+}
+
 void ConnectomicWindow::OnNbLabels( wxCommandEvent& event )
 {
     double nbLabels;
@@ -183,6 +222,58 @@ void ConnectomicWindow::OnSliderDisplayMoved( wxCommandEvent& event )
 	ConnectomeHelper::getInstance()->getConnectome()->setEdgeAlpha( sliderValue );
 
     ConnectomeHelper::getInstance()->setDirty( true );
+}
+
+bool ConnectomicWindow::SelectColor( wxColour &col )
+{
+    wxColourData colorData;
+    
+    for( int i = 0; i < 10; ++i )
+    {
+        wxColour colorTemp(i * 28, i * 28, i * 28);
+        colorData.SetCustomColour(i, colorTemp);
+    }
+    
+    int i = 10;
+    wxColour colorTemp ( 255, 0, 0 );
+    colorData.SetCustomColour( i++, colorTemp );
+    wxColour colorTemp1( 0, 255, 0 );
+    colorData.SetCustomColour( i++, colorTemp1 );
+    wxColour colorTemp2( 0, 0, 255 );
+    colorData.SetCustomColour( i++, colorTemp2 );
+    wxColour colorTemp3( 255, 255, 0 );
+    colorData.SetCustomColour( i++, colorTemp3 );
+    wxColour colorTemp4( 255, 0, 255 );
+    colorData.SetCustomColour( i++, colorTemp4 );
+    wxColour colorTemp5( 0, 255, 255 );
+    colorData.SetCustomColour( i++, colorTemp5 );
+    
+    wxColourDialog dialog( this, &colorData );
+
+    if( dialog.ShowModal() == wxID_OK )
+    {
+        wxColourData retData = dialog.GetColourData();
+        col = retData.GetColour();
+        return true;
+    }
+
+    return false;
+}
+
+void ConnectomicWindow::OnAssignColorNode( wxCommandEvent& WXUNUSED(event) )
+{
+
+    wxColour newCol;
+    
+    bool success = SelectColor( newCol );
+    
+    if( !success )
+    {
+        return;
+    }
+   
+    ConnectomeHelper::getInstance()->setNodeColor( newCol );
+
 }
 
 void ConnectomicWindow::OnToggleFlashyEdges( wxCommandEvent& event )
