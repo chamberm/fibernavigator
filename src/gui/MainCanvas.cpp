@@ -11,6 +11,7 @@
 #include "../dataset/DatasetManager.h"
 #include "../dataset/RTTrackingHelper.h"
 #include "../dataset/RTFMRIHelper.h"
+#include "../dataset/ConnectomeHelper.h"
 #include "../dataset/Tensors.h"
 #include "../gfx/ShaderHelper.h"
 #include "../misc/lic/FgeOffscreen.h"
@@ -363,6 +364,10 @@ void MainCanvas::processRightMouseDown( wxMouseEvent &evt, int clickX, int click
         {
             MyApp::frame->m_pTreeWidget->SelectItem( ( (SelectionObject*) m_hr.object )->getTreeId() );
         }
+        if ( m_hr.picked == 100 )
+        {
+            ConnectomeHelper::getInstance()->getConnectome()->displayPickedNodeMetrics(m_hr);
+        }
     }
     else
     {
@@ -639,6 +644,11 @@ hitResult MainCanvas::pick( wxPoint click, bool isRulerOrDrawer)
                 hr = hr1;
             }
         }
+    }
+
+    if( ConnectomeHelper::getInstance()->isLabelsReady() )
+    {        
+        hr = ConnectomeHelper::getInstance()->getConnectome()->hitTest(ray);
     }
  
     return hr;

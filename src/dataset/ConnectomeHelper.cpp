@@ -10,9 +10,9 @@ m_isEdgesSelected( false ),
 m_isLabelsReady( false ),
 m_isEdgesReady( false ),
 m_isDirty( true ),
-m_Nodecolor( wxColour( 255, 0, 0 ) )
+m_Connectome( NULL )
 {
-    m_Connectome = new Connectome();
+
 }
 
 ConnectomeHelper * ConnectomeHelper::getInstance()
@@ -24,7 +24,17 @@ ConnectomeHelper * ConnectomeHelper::getInstance()
     return m_pInstance;
 }
 
+void ConnectomeHelper::createConnectome()
+{
+    if(m_Connectome == NULL)
+        m_Connectome = new Connectome();
+}
 
+void ConnectomeHelper::deleteConnectome()
+{
+    m_Connectome->clearConnectome();
+    delete m_Connectome;
+}
 ConnectomeHelper::~ConnectomeHelper()
 {
     m_pInstance = NULL;

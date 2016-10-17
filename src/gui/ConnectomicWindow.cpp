@@ -7,10 +7,12 @@
 #include "../dataset/Anatomy.h"
 
 #include <wx/checkbox.h>
-#include <wx/grid.h>
 #include <wx/tglbtn.h>
 #include <wx/treectrl.h>
 #include <wx/colordlg.h>
+
+
+
 
 
 IMPLEMENT_DYNAMIC_CLASS( ConnectomicWindow, wxScrolledWindow )
@@ -27,6 +29,8 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
     m_pConnectomicSizer = new wxBoxSizer( wxVERTICAL );
     SetSizer( m_pConnectomicSizer );
     SetAutoLayout( true );
+
+    m_pConnectomicSizer->AddSpacer( 8 );
 
     m_pNbLabels  = new wxTextCtrl( this, wxID_ANY, wxString::Format( wxT( "%i" ), 161 ), wxDefaultPosition, wxSize( 75, -1 ) );
     Connect( m_pNbLabels->GetId(),  wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ConnectomicWindow::OnNbLabels ) );
@@ -54,8 +58,22 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
     //pBoxRow1->Add( new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxSize(230,-1),wxHORIZONTAL,wxT("Separator")), 0, wxALIGN_RIGHT | wxALL, 1 );
 	m_pConnectomicSizer->Add( pBoxRow1, 0, wxFIXED_MINSIZE | wxEXPAND, 0 );
 
+    m_pConnectomicSizer->AddSpacer( 8 );
+
+    m_pTextEdgeThreshold = new wxStaticText( this, wxID_ANY, wxT("Threshold"), wxDefaultPosition, wxSize(70, -1), wxALIGN_CENTER );
+	m_pSliderEdgeThreshold= new MySlider( this, wxID_ANY, 0, 0, 200, wxDefaultPosition, wxSize(100, -1), wxSL_HORIZONTAL | wxSL_AUTOTICKS );
+	m_pSliderEdgeThreshold->SetValue( 0 );
+	Connect( m_pSliderEdgeThreshold->GetId(), wxEVT_COMMAND_SLIDER_UPDATED, wxCommandEventHandler(ConnectomicWindow::onSliderEdgeThreshold) );
+    m_pTxtEdgeThresholdBox = new wxTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxSize(55, -1), wxTE_CENTRE | wxTE_READONLY );
+
+	wxBoxSizer *pBoxThresh = new wxBoxSizer( wxHORIZONTAL );
+    pBoxThresh->Add( m_pTextEdgeThreshold, 0, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL | wxALL, 1 );
+    pBoxThresh->Add( m_pSliderEdgeThreshold,   0, wxALIGN_CENTER | wxEXPAND | wxALL, 1);
+	pBoxThresh->Add( m_pTxtEdgeThresholdBox,   0, wxALIGN_CENTER | wxALL, 1);
+	m_pConnectomicSizer->Add( pBoxThresh, 0, wxFIXED_MINSIZE | wxEXPAND, 0 );
+
     m_pTextNodeSize = new wxStaticText( this, wxID_ANY, wxT("Node size"), wxDefaultPosition, wxSize(70, -1), wxALIGN_CENTER );
-	m_pSliderNodeSize= new MySlider( this, wxID_ANY, 0, 1, 50, wxDefaultPosition, wxSize(100, -1), wxSL_HORIZONTAL | wxSL_AUTOTICKS );
+	m_pSliderNodeSize= new MySlider( this, wxID_ANY, 0, 1, 100, wxDefaultPosition, wxSize(100, -1), wxSL_HORIZONTAL | wxSL_AUTOTICKS );
 	m_pSliderNodeSize->SetValue( 20 );
 	Connect( m_pSliderNodeSize->GetId(), wxEVT_COMMAND_SLIDER_UPDATED, wxCommandEventHandler(ConnectomicWindow::OnSliderDisplayMoved) );
     m_pTxtNodeSizeBox = new wxTextCtrl( this, wxID_ANY, wxT("2.0"), wxDefaultPosition, wxSize(55, -1), wxTE_CENTRE | wxTE_READONLY );
@@ -68,9 +86,9 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
 
 	m_pTextNodeAlpha = new wxStaticText( this, wxID_ANY, wxT("Node Alpha"), wxDefaultPosition, wxSize(70, -1), wxALIGN_CENTER );
 	m_pSliderNodeAlpha = new MySlider( this, wxID_ANY, 0, 0, 100, wxDefaultPosition, wxSize(60, -1), wxSL_HORIZONTAL | wxSL_AUTOTICKS );
-	m_pSliderNodeAlpha->SetValue( 50 );
+	m_pSliderNodeAlpha->SetValue( 100 );
 	Connect( m_pSliderNodeAlpha->GetId(), wxEVT_COMMAND_SLIDER_UPDATED, wxCommandEventHandler(ConnectomicWindow::OnSliderDisplayMoved) );
-    m_pTxtNodeAlphaBox = new wxTextCtrl( this, wxID_ANY, wxT("0.5"), wxDefaultPosition, wxSize(55, -1), wxTE_CENTRE | wxTE_READONLY );
+    m_pTxtNodeAlphaBox = new wxTextCtrl( this, wxID_ANY, wxT("1.0"), wxDefaultPosition, wxSize(55, -1), wxTE_CENTRE | wxTE_READONLY );
 
     wxImage bmpColor(MyApp::iconsPath+ wxT("colorSelect.png" ), wxBITMAP_TYPE_PNG);
     m_pbtnSelectColor = new wxBitmapButton(this, wxID_ANY, bmpColor, wxDefaultPosition, wxSize(40,-1));
@@ -84,7 +102,7 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
 	m_pConnectomicSizer->Add( pBoxRow4, 0, wxFIXED_MINSIZE | wxEXPAND, 0 );
 
     m_pTextEdgeSize = new wxStaticText( this, wxID_ANY, wxT("Edge size"), wxDefaultPosition, wxSize(70, -1), wxALIGN_CENTER );
-	m_pSliderEdgeSize= new MySlider( this, wxID_ANY, 0, 1, 5, wxDefaultPosition, wxSize(100, -1), wxSL_HORIZONTAL | wxSL_AUTOTICKS );
+	m_pSliderEdgeSize= new MySlider( this, wxID_ANY, 0, 1, 7, wxDefaultPosition, wxSize(100, -1), wxSL_HORIZONTAL | wxSL_AUTOTICKS );
 	m_pSliderEdgeSize->SetValue( 2 );
 	Connect( m_pSliderEdgeSize->GetId(), wxEVT_COMMAND_SLIDER_UPDATED, wxCommandEventHandler(ConnectomicWindow::OnSliderDisplayMoved) );
     m_pTxtEdgeSizeBox = new wxTextCtrl( this, wxID_ANY, wxT("2.0"), wxDefaultPosition, wxSize(55, -1), wxTE_CENTRE | wxTE_READONLY );
@@ -119,7 +137,7 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
     //pBoxRow7->Add( new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxSize(230,-1),wxHORIZONTAL,wxT("Separator")), 0, wxALIGN_RIGHT | wxALL, 1 );
 	m_pConnectomicSizer->Add( pBoxRow7, 0,  wxFIXED_MINSIZE | wxALL, 2 );
 
-    wxTextCtrl *metricZone = new wxTextCtrl( this, wxID_ANY, wxT("Graph metrics"), wxDefaultPosition, wxSize(230, -1), wxTE_CENTER | wxTE_READONLY );
+    wxTextCtrl *metricZone = new wxTextCtrl( this, wxID_ANY, wxT("Global graph metrics"), wxDefaultPosition, wxSize(230, -1), wxTE_CENTER | wxTE_READONLY );
     metricZone->SetBackgroundColour( *wxLIGHT_GREY );
     wxFont metric_font = metricZone->GetFont();
     metric_font.SetPointSize( 10 );
@@ -131,9 +149,62 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
 	pBoxMetricZone->Add( metricZone,   0, wxALIGN_CENTER | wxALL, 1);
 	m_pConnectomicSizer->Add( pBoxMetricZone, 0, wxFIXED_MINSIZE | wxALL, 2 );
 
-    
+    m_pConnectomicSizer->AddSpacer( 8 );
+
+    //////////////////////////////////////////////////////////////////////////
+
+    m_pGridGlobalInfo = new wxGrid( this, wxID_ANY );
+    m_pGridGlobalInfo->SetRowLabelAlignment( wxALIGN_LEFT, wxALIGN_CENTER );
+    wxFont font = m_pGridGlobalInfo->GetFont();
+    font.SetPointSize( 8 );
+    font.SetWeight( wxFONTWEIGHT_BOLD );
+    m_pGridGlobalInfo->SetFont( font );
+    m_pGridGlobalInfo->SetColLabelSize( 2 );
+    m_pGridGlobalInfo->CreateGrid( 3, 1, wxGrid::wxGridSelectCells );
+    m_pGridGlobalInfo->SetColLabelValue( 0, wxT( "" ) );
+    m_pGridGlobalInfo->SetRowLabelValue( 0, wxT( "# of nodes" ) );
+    m_pGridGlobalInfo->SetRowLabelValue( 1, wxT( "# of edges" ) );
+    m_pGridGlobalInfo->SetRowLabelValue( 2, wxT( "Connectance" ) );
+
+    m_pGridGlobalInfo->SetRowLabelSize( 120 );
+
+    m_pConnectomicSizer->Add( m_pGridGlobalInfo, 0, wxALIGN_CENTER | wxALL, 0 );
+
+    wxTextCtrl *nodeZone = new wxTextCtrl( this, wxID_ANY, wxT("Node metrics"), wxDefaultPosition, wxSize(230, -1), wxTE_CENTER | wxTE_READONLY );
+    nodeZone->SetBackgroundColour( *wxLIGHT_GREY );
+    wxFont node_font = nodeZone->GetFont();
+    node_font.SetPointSize( 10 );
+    node_font.SetWeight( wxFONTWEIGHT_BOLD );
+    nodeZone->SetFont( node_font );
+
+	wxBoxSizer *pBoxNodeZone = new wxBoxSizer( wxVERTICAL );
+    pBoxNodeZone->Add( new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxSize(230,-1),wxHORIZONTAL,wxT("Separator")), 0, wxALIGN_RIGHT | wxALL, 1 );
+	pBoxNodeZone->Add( nodeZone,   0, wxALIGN_CENTER | wxALL, 1);
+	m_pConnectomicSizer->Add( pBoxNodeZone, 0, wxFIXED_MINSIZE | wxALL, 2 );
+
+    m_pConnectomicSizer->AddSpacer( 8 );
+
+    //////////////////////////////////////////////////////////////////////////
+
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo = new wxGrid( this, wxID_ANY );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelAlignment( wxALIGN_LEFT, wxALIGN_CENTER );
+    wxFont nodefont = ConnectomeHelper::getInstance()->m_pGridNodeInfo->GetFont();
+    nodefont.SetPointSize( 8 );
+    nodefont.SetWeight( wxFONTWEIGHT_BOLD );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetFont( nodefont );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetColLabelSize( 2 );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->CreateGrid( 3, 1, wxGrid::wxGridSelectCells );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetColLabelValue( 0, wxT( "" ) );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 0, wxT( "Name" ) );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 1, wxT( "ID" ) );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 2, wxT( "Degree" ) );
+
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelSize( 120 );
+
+    m_pConnectomicSizer->Add( ConnectomeHelper::getInstance()->m_pGridNodeInfo, 0, wxALIGN_CENTER | wxALL, 0 );
 
 }
+
 
 void ConnectomicWindow::OnSize( wxSizeEvent &WXUNUSED(event) )
 {
@@ -157,10 +228,11 @@ void ConnectomicWindow::onSelectLabels( wxCommandEvent& event )
 
 	if( pMap != NULL && pMap->getBands() == 1 )
     {
+        ConnectomeHelper::getInstance()->createConnectome();
         double nbLabels;
         m_pNbLabels->GetValue().ToDouble( &nbLabels );    
         ConnectomeHelper::getInstance()->getConnectome()->setNbLabels( nbLabels );
-
+        m_pGridGlobalInfo->SetCellValue( 0,  0, wxString::Format( wxT( "%i" ),     int(nbLabels)        ) );
 		m_pBtnSelectLabels->SetLabel( pMap->getName() );
         m_pBtnSelectLabels->SetBackgroundColour(wxNullColour);
         ConnectomeHelper::getInstance()->getConnectome()->setLabels( (Anatomy *)DatasetManager::getInstance()->getDataset( m_pMainFrame->m_pListCtrl->GetItem( item ) ) );
@@ -178,14 +250,17 @@ void ConnectomicWindow::onSelectEdges( wxCommandEvent& event )
         m_pBtnSelectEdges->SetLabel( pFibers->getName() );
         m_pBtnSelectEdges->SetBackgroundColour(wxNullColour);
         ConnectomeHelper::getInstance()->getConnectome()->setEdges( (Fibers *)DatasetManager::getInstance()->getDataset( m_pMainFrame->m_pListCtrl->GetItem( item ) ) );
+
+        m_pGridGlobalInfo->SetCellValue( 1,  0, wxString::Format( wxT( "%i" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_NbEdges        ) );
+        m_pGridGlobalInfo->SetCellValue( 2,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_Connectance       ) );
         ConnectomeHelper::getInstance()->setEdgesSelected(true);
     }
 }
 
 void ConnectomicWindow::onClearConnectome( wxCommandEvent& event )
 {
-    
-    ConnectomeHelper::getInstance()->getConnectome()->clearConnectome();
+    ConnectomeHelper::getInstance()->deleteConnectome();
+    //ConnectomeHelper::getInstance()->getConnectome()->clearConnectome();
 
 	m_pBtnSelectLabels->SetLabel( wxT( "Labels not selected") );
     m_pBtnSelectLabels->SetBackgroundColour(wxColour(255, 147, 147));
@@ -193,10 +268,20 @@ void ConnectomicWindow::onClearConnectome( wxCommandEvent& event )
     m_pBtnSelectEdges->SetLabel( wxT( "Tracts not selected") );
     m_pBtnSelectEdges->SetBackgroundColour(wxColour(255, 147, 147));
 
+    m_pGridGlobalInfo->SetCellValue( 0,  0, wxT( "" ) );
+    m_pGridGlobalInfo->SetCellValue( 1,  0, wxT( "" ) );
+    m_pGridGlobalInfo->SetCellValue( 2,  0, wxT( "" ) );
+
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 0,  0, wxT( "" )) ;
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 1,  0, wxT( "" ));
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 2,  0, wxT( "" ));
+
 }
 
 void ConnectomicWindow::OnNbLabels( wxCommandEvent& event )
 {
+    ConnectomeHelper::getInstance()->createConnectome();
+
     double nbLabels;
     m_pNbLabels->GetValue().ToDouble( &nbLabels );    
     ConnectomeHelper::getInstance()->getConnectome()->setNbLabels( nbLabels );
@@ -222,6 +307,20 @@ void ConnectomicWindow::OnSliderDisplayMoved( wxCommandEvent& event )
 	ConnectomeHelper::getInstance()->getConnectome()->setEdgeAlpha( sliderValue );
 
     ConnectomeHelper::getInstance()->setDirty( true );
+}
+
+void ConnectomicWindow::onSliderEdgeThreshold( wxCommandEvent& event )
+{
+    float sliderValue = m_pSliderEdgeThreshold->GetValue() / 1000.0f;
+	m_pTxtEdgeThresholdBox->SetValue( wxString::Format( wxT( "%.3f"), sliderValue ) );
+	ConnectomeHelper::getInstance()->getConnectome()->setEdgeThreshold( sliderValue );
+    ConnectomeHelper::getInstance()->getConnectome()->computeNodeDegree();
+    ConnectomeHelper::getInstance()->getConnectome()->computeGlobalMetrics();
+
+    m_pGridGlobalInfo->SetCellValue( 0,  0, wxString::Format( wxT( "%i" ),   ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_NbNodes            ) );
+    m_pGridGlobalInfo->SetCellValue( 1,  0, wxString::Format( wxT( "%i" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_NbEdges        ) );
+    m_pGridGlobalInfo->SetCellValue( 2,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_Connectance       ) );
+
 }
 
 bool ConnectomicWindow::SelectColor( wxColour &col )
@@ -272,7 +371,7 @@ void ConnectomicWindow::OnAssignColorNode( wxCommandEvent& WXUNUSED(event) )
         return;
     }
    
-    ConnectomeHelper::getInstance()->setNodeColor( newCol );
+    ConnectomeHelper::getInstance()->getConnectome()->setNodeColor( newCol );
 
 }
 

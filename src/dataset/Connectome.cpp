@@ -34,7 +34,7 @@
 Connectome::Connectome():
 m_labels(NULL),
 m_NbLabels(161),
-m_nodeAlpha(0.5f),
+m_nodeAlpha(1.0f),
 m_nodeSize(2),
 m_edgeSize(2.0f),
 m_edgeAlpha(1.0f),
@@ -42,7 +42,9 @@ m_isFlashyEdges(false),
 m_isOrientationDep(false),
 m_Edgemax(0),
 m_Edgemin(std::numeric_limits<int>::max()),
-m_NodeDegreeMax(1)
+m_NodeDegreeMax(1),
+m_Edgethreshold(0.0f),
+m_savedNodeColor(1.0f,0.0f,0.0f)
 {
 	std::cout<<"Connectome constructor"<<std::endl;
 
@@ -68,18 +70,21 @@ Connectome::~Connectome()
 void Connectome::clearConnectome()
 {
     Edges.clear();
-    nodeDegree.clear();
     m_labelHist.clear();
     Nodes.clear();
+
+    m_Globalstats.m_NbNodes = 0;
+    m_Globalstats.m_NbEdges = 0;
+    m_Globalstats.m_Connectance = 0;
+
     ConnectomeHelper::getInstance()->setEdgesReady(false);
     ConnectomeHelper::getInstance()->setLabelsReady(false);
       
 }
 void Connectome::setLabels(Anatomy *labels)
 {
-
-    std::cout << "Nb labels: " << m_NbLabels << std::endl;
     m_labels = labels;
+    std::cout << "Nb labels: " << m_NbLabels << std::endl;
     m_labelHist.resize( m_NbLabels );
 
     //Read labels, prepare for barycenter
@@ -103,6 +108,7 @@ void Connectome::setLabels(Anatomy *labels)
 	}
 
     Nodes.resize( m_NbLabels );
+
     //Compute barycenter to display node
     for(unsigned int i=0; i<m_labelHist.size(); i++)
     {
@@ -121,17 +127,16 @@ void Connectome::setLabels(Anatomy *labels)
             float posX = sumX/m_labelHist[i].size()*m_voxelSizeX;
             float posY = sumY/m_labelHist[i].size()*m_voxelSizeY;
             float posZ = sumZ/m_labelHist[i].size()*m_voxelSizeZ;
-            Nodes[i] = Vector(posX, posY, posZ);
+            Nodes[i].center = Vector(posX, posY, posZ);
         }
     }
 
+    m_Globalstats.m_NbNodes = m_NbLabels;
     ConnectomeHelper::getInstance()->setLabelsReady(true);
-    //renderGraph();
 }
 
 void Connectome::setEdges(Fibers *edges)
 {
-
     m_fibers = edges;
     int nbFibers = m_fibers->getFibersCount();
 
@@ -175,17 +180,13 @@ void Connectome::setEdges(Fibers *edges)
         }
     }
 
-    nodeDegree.resize(m_NbLabels);
-
     //Normalize
     for (unsigned int i=0; i<Edges.size();i++)
     {
-        int deg = 0;
         for (unsigned int j=0; j<Edges[i].size(); j++)
         {
             if(Edges[i][j] !=0 && i!=j)
             {
-                deg+=1;
                 int tmpMax = Edges[i][j];
                 int tmpMin = Edges[i][j];
                 if(tmpMax > m_Edgemax)
@@ -197,7 +198,6 @@ void Connectome::setEdges(Fibers *edges)
                     m_Edgemin = tmpMin;
                 }
             }
-         nodeDegree[i] =  deg;
         }
     }
 
@@ -210,30 +210,63 @@ void Connectome::setEdges(Fibers *edges)
             {
                 Edges[i][j] = (Edges[i][j] - m_Edgemin)/(m_Edgemax-m_Edgemin);
             }
-        }
+        }   
+    }
 
+    std::cout << "Edge min.: " << m_Edgemin << " " << "Edge max.: " << m_Edgemax << std::endl;
+
+    computeGlobalMetrics();
+    computeNodeDegree();
+    ConnectomeHelper::getInstance()->setEdgesReady(true);
+}
+
+void Connectome::computeNodeDegree()
+{
+    for (unsigned int i=0; i<Edges.size();i++)
+    {
+        int deg = 0;
+        for (unsigned int j=0; j<Edges[i].size(); j++)
+        {
+            if(Edges[i][j] > m_Edgethreshold && i!=j)
+            {
+                deg++;
+            }
+        }
+        Nodes[i].degree = deg;
+        if(Nodes[i].picked)
+        {
+            ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(1,0,wxString::Format( wxT( "%i" ), i));
+            ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(2,0,wxString::Format( wxT( "%i" ), Nodes[i].degree));
+        }
+    }
+
+    for(unsigned int i=0; i<Edges.size();i++)
+    {
         //Normalize node degree for visualization
-        int tmpMax = nodeDegree[i];
+        int tmpMax = Nodes[i].degree;
         if(tmpMax > m_NodeDegreeMax)
         {
             m_NodeDegreeMax = tmpMax;
         }
     }
-    std::cout << "Edge min.: " << m_Edgemin << " " << "Edge max.: " << m_Edgemax << std::endl;
-    ConnectomeHelper::getInstance()->setEdgesReady(true);
-    //renderGraph();
 }
-
+void Connectome::setNodeColor( wxColour color )
+{
+    m_savedNodeColor = Vector( (float)color.Red() / 255.0f, (float)color.Green() / 255.0f, (float)color.Blue() / 255.0f);;
+    for (unsigned int i=0; i<Nodes.size(); i++)
+    {
+        Nodes[i].color = m_savedNodeColor;
+    }
+}
 void Connectome::renderNodes()
 {
-    
     for (unsigned int i=0; i<Nodes.size(); i++)
     {
         /*glDepthMask(GL_FALSE);
         glEnable( GL_BLEND );
         glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA ); */
 
-        if(Nodes[i].getSquaredLength() != 0)
+        if(Nodes[i].center.getSquaredLength() != 0)
         {
             if(m_nodeAlpha != 1.0f)
 		    {
@@ -242,20 +275,20 @@ void Connectome::renderNodes()
                 glDepthMask( GL_FALSE );
             }
             //nodes
-            wxColor color = ConnectomeHelper::getInstance()->getNodeColor();
-            glColor4f( (float)color.Red() / 255.0f, (float)color.Green() / 255.0f, (float)color.Blue() / 255.0f, m_nodeAlpha );
 
-            float size = m_nodeSize;
+            glColor4f(Nodes[i].color.x, Nodes[i].color.y, Nodes[i].color.z, m_nodeAlpha);
+
+            Nodes[i].size = m_nodeSize;
             if(ConnectomeHelper::getInstance()->isEdgesReady())
             {
-                size *= (nodeDegree[i]/m_NodeDegreeMax);
+                Nodes[i].size *= (float(Nodes[i].degree)/m_NodeDegreeMax);
             }
     
             glPushMatrix();
-                glTranslatef( Nodes[i].x, Nodes[i].y, Nodes[i].z );
+                glTranslatef( Nodes[i].center.x, Nodes[i].center.y, Nodes[i].center.z );
                 GLUquadricObj* l_quadric = gluNewQuadric();
                 gluQuadricNormals( l_quadric, GLU_SMOOTH );
-                glScalef( size, size, size );
+                glScalef( Nodes[i].size, Nodes[i].size, Nodes[i].size);
                 gluSphere( l_quadric, 1.0f, 16, 16 );
             glPopMatrix();
 
@@ -264,6 +297,57 @@ void Connectome::renderNodes()
             
         }
     }
+}
+
+hitResult Connectome::hitTest(Ray* i_ray)
+{
+    hitResult hr = { false, 0.0f, 0, NULL };
+
+    for(unsigned int i=0; i < Nodes.size(); i++)
+    {
+        if(Nodes[i].size > 0)
+        {
+            int   picked  = 0;
+            float tpicked = 0;
+            float cx = Nodes[i].center.x;
+            float cy = Nodes[i].center.y;
+            float cz = Nodes[i].center.z;
+            float size = Nodes[i].size * m_voxelSizeX;
+
+            BoundingBox *bb = new BoundingBox( cx, cy, cz, size, size, size );
+            hr = bb->hitTest( i_ray );
+            if( hr.hit )
+            {
+                hr.picked = 100;
+                hr.tmin = i;
+                
+                break;
+            }
+        }     
+    }
+
+    return hr;
+}
+
+void Connectome::displayPickedNodeMetrics(hitResult hr)
+{
+    int id = hr.tmin;
+    Nodes[id].picked = !Nodes[id].picked;
+
+    if(Nodes[id].picked)
+    {
+        Nodes[id].color = Vector(1.0f, 1.0f, 1.0f);
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(1,0,wxString::Format( wxT( "%i" ), id));
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(2,0,wxString::Format( wxT( "%i" ), Nodes[id].degree));
+    }
+    else
+    {
+        Nodes[id].color = m_savedNodeColor;
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(1,0,wxString::Format( wxT( "" ), wxT( "" )));
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(2,0,wxString::Format( wxT( "" ), wxT( "" )));
+    }
+
+    
 }
 
 void Connectome::renderEdges()
@@ -275,7 +359,7 @@ void Connectome::renderEdges()
         glDepthMask(GL_TRUE);
         for(unsigned int j=i+1; j<Edges[i].size();j++)
         {
-            if(Edges[i][j] !=0)
+            if(Edges[i][j] > m_Edgethreshold)
             {
                 float alphaValue = m_edgeAlpha;
 			    float R,G,B;
@@ -307,7 +391,7 @@ void Connectome::renderEdges()
                 }
                 
                 //Local vector
-                Vector normalVector = Vector(Nodes[i].x-Nodes[j].x,Nodes[i].y-Nodes[j].y,Nodes[i].z-Nodes[j].z);
+                Vector normalVector = Vector(Nodes[i].center.x-Nodes[j].center.x,Nodes[i].center.y-Nodes[j].center.y,Nodes[i].center.z-Nodes[j].center.z);
                 normalVector.normalize();
 
                 
@@ -345,8 +429,8 @@ void Connectome::renderEdges()
                     
                 glColor4f( R,G,B, alphaValue*m_edgeAlpha);
                 glBegin( GL_LINES );
-                    glVertex3f( Nodes[i].x, Nodes[i].y, Nodes[i].z );
-                    glVertex3f( Nodes[j].x, Nodes[j].y, Nodes[j].z );
+                    glVertex3f( Nodes[i].center.x, Nodes[i].center.y, Nodes[i].center.z );
+                    glVertex3f( Nodes[j].center.x, Nodes[j].center.y, Nodes[j].center.z );
                 glEnd();
                 glDisable(GL_BLEND);
                 glDepthMask(GL_TRUE);
@@ -355,6 +439,33 @@ void Connectome::renderEdges()
             }
         }
     }
+}
+
+void Connectome::computeGlobalMetrics()
+{
+    int nbNodes = 0;
+    int totalEdges = 0;
+    for (unsigned int i=0; i<Edges.size(); i++)
+    {
+        float sumEdge = 0.0f;
+        for(unsigned int j=0; j<Edges[i].size();j++)
+        {
+            if(Edges[i][j] > m_Edgethreshold && j!=i)
+            {
+                sumEdge++;
+            }
+        }
+        if(sumEdge > 0.0f)
+        {
+            nbNodes++;
+        }
+        totalEdges+=sumEdge;
+    }
+
+    m_Globalstats.m_NbNodes = nbNodes;
+    m_Globalstats.m_NbEdges = totalEdges/2;
+    m_Globalstats.m_Connectance = float(totalEdges/2) / float((nbNodes)*(nbNodes-1));
+
 }
 
 void Connectome::renderGraph()

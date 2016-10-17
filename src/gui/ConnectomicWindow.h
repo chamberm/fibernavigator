@@ -18,6 +18,9 @@
 #include <wx/scrolwin.h>
 #include <wx/statline.h>
 
+#include <wx/grid.h>
+
+
 class MainFrame;
 class wxToggleButton;
 
@@ -41,6 +44,7 @@ public:
     void OnToggleOrientationDep        ( wxCommandEvent& event );
     void onClearConnectome             ( wxCommandEvent& event );
     void OnAssignColorNode             ( wxCommandEvent& event );
+    void onSliderEdgeThreshold                ( wxCommandEvent& event );
     bool SelectColor                        ( wxColour &col );
 	
 	
@@ -51,6 +55,10 @@ private:
     wxButton            *m_pBtnSelectEdges;
     wxTextCtrl          *m_pNbLabels;
     wxTextCtrl          *m_pTxtBoxNbLabels;
+
+    wxStaticText        *m_pTextEdgeThreshold;
+	wxSlider            *m_pSliderEdgeThreshold;
+	wxTextCtrl          *m_pTxtEdgeThresholdBox;
 
     wxStaticText        *m_pTextNodeSize;
 	wxSlider            *m_pSliderNodeSize;
@@ -71,6 +79,9 @@ private:
 
     wxButton            *m_pBtnClearConnectome;
     wxBitmapButton      *m_pbtnSelectColor;
+
+    wxGrid              *m_pGridGlobalInfo;
+    
 	
     
 private:

@@ -11,6 +11,38 @@
 #include "DatasetIndex.h"
 #include "../misc/nifti/nifti1_io.h"
 
+struct GlobalGraphMetrics 
+{
+    GlobalGraphMetrics() : 
+        m_NbNodes( 0 ),
+        m_NbEdges ( 0 ),
+        m_Connectance ( 0.0f )
+    {
+    }
+    
+    int   m_NbNodes;
+    int   m_NbEdges;
+    float m_Connectance;
+};
+
+struct Node
+{
+    Node():
+    center(0,0,0),
+    size(1),
+    color(1.0f, 0.0f, 0.0f),
+    degree(0),
+    picked(false)
+
+{
+}
+    Vector center;
+    float size;
+    Vector color;
+    int degree;
+    bool picked;
+};
+
 class Connectome
 {
 public:
@@ -26,6 +58,7 @@ public:
     void setNodeSize( float value ) {m_nodeSize = value;}
     void setEdgeSize( float value) {m_edgeSize = value;}
     void setEdgeAlpha(float value) {m_edgeAlpha = value;}
+    void setEdgeThreshold(float value) {m_Edgethreshold = value;}
     
     bool toggleFlashyEdges()           { return m_isFlashyEdges = !m_isFlashyEdges; }
     bool isFlashyEdges() const { return m_isFlashyEdges; }
@@ -35,8 +68,20 @@ public:
     void renderGraph();
     void renderNodes();
     void renderEdges();
+    void setNodeColor( wxColour color );
+    void displayPickedNodeMetrics( hitResult hr);
+
+    void computeNodeDegree();
+    void computeGlobalMetrics();
+
+    hitResult hitTest( Ray* i_ray );
 
     void clearConnectome();
+    GlobalGraphMetrics getGlobalStats() {return m_Globalstats;}
+
+
+protected:
+    GlobalGraphMetrics        m_Globalstats;
 
 	
 private:
@@ -59,15 +104,16 @@ private:
     int m_Edgemax;
     int m_Edgemin;
     int m_NodeDegreeMax;
+    float m_Edgethreshold;
+    Vector m_savedNodeColor;
 
     int m_NbLabels;
     std::vector<std::vector<Vector> > m_labelHist;
 
-    std::vector<Vector> Nodes;
+    std::vector<Node> Nodes;
     std::vector<std::vector<float> > Edges;
 
     //metrics
-    std::vector<float> nodeDegree;
 
 };
 

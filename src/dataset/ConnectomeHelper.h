@@ -2,6 +2,7 @@
 #define CONNECTOMEHELPER_H_
 
 #include "Connectome.h"
+#include <wx/grid.h>
 
 class ConnectomeHelper
 {
@@ -22,11 +23,12 @@ public:
     
     bool isDirty() const     { return m_isDirty; }
     void setDirty( bool dirty )          { m_isDirty = dirty; }
-
-    void setNodeColor ( wxColour color )         { m_Nodecolor  = color; };
-    wxColour getNodeColor() const                    { return m_Nodecolor;   };
     
     Connectome* getConnectome() { return m_Connectome; }
+    void createConnectome(); 
+    void deleteConnectome();
+
+    wxGrid              *m_pGridNodeInfo;
     
     
 protected:
@@ -35,6 +37,7 @@ protected:
 private:
     ConnectomeHelper( const ConnectomeHelper & );
     ConnectomeHelper &operator=( const ConnectomeHelper &);
+    
 
 private:
     static ConnectomeHelper * m_pInstance;
@@ -44,8 +47,8 @@ private:
     bool m_isLabelsReady;
     bool m_isEdgesReady;
     bool m_isDirty;
-    wxColour m_Nodecolor;
-   
+
+    
 
 };
 
