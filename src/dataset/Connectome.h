@@ -16,13 +16,16 @@ struct GlobalGraphMetrics
     GlobalGraphMetrics() : 
         m_NbNodes( 0 ),
         m_NbEdges ( 0 ),
-        m_Connectance ( 0.0f )
+        m_Density ( 0.0f ),
+        m_meanDegree ( 0.0f )
     {
     }
     
     int   m_NbNodes;
     int   m_NbEdges;
-    float m_Connectance;
+    float m_Density;
+    float m_meanDegree;
+    float m_globalEfficiency;
 };
 
 struct Node
@@ -31,16 +34,21 @@ struct Node
     center(0,0,0),
     size(1),
     color(1.0f, 0.0f, 0.0f),
+    picked(false),
     degree(0),
-    picked(false)
-
+    strength(0.0f)
 {
 }
     Vector center;
     float size;
     Vector color;
-    int degree;
     bool picked;
+
+    int degree;
+    float strength;
+    float eigen_centrality;
+    float closeness_centrality;
+    float betweenness_centrality;
 };
 
 class Connectome
@@ -70,8 +78,10 @@ public:
     void renderEdges();
     void setNodeColor( wxColour color );
     void displayPickedNodeMetrics( hitResult hr);
+    std::vector<bool> getSelectedFibers() { return m_selectedFibers;}
+    void setSelectedStreamlines();
 
-    void computeNodeDegree();
+    void computeNodeDegreeAndStrength();
     void computeGlobalMetrics();
 
     hitResult hitTest( Ray* i_ray );
@@ -106,10 +116,12 @@ private:
     int m_NodeDegreeMax;
     float m_Edgethreshold;
     Vector m_savedNodeColor;
+    int m_NbOfPickedNodes;
 
     int m_NbLabels;
     std::vector<std::vector<Vector> > m_labelHist;
-
+    std::vector<std::vector<std::vector<int> > > m_fiberMatrix;
+    std::vector<bool> m_selectedFibers;
     std::vector<Node> Nodes;
     std::vector<std::vector<float> > Edges;
 

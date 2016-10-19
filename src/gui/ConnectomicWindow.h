@@ -41,10 +41,11 @@ public:
     void OnNbLabels                    ( wxCommandEvent& event );
     void OnSliderDisplayMoved          ( wxCommandEvent& event );
     void OnToggleFlashyEdges           ( wxCommandEvent& event );
+    void OnToggleShowFibers            ( wxCommandEvent& event );
     void OnToggleOrientationDep        ( wxCommandEvent& event );
     void onClearConnectome             ( wxCommandEvent& event );
     void OnAssignColorNode             ( wxCommandEvent& event );
-    void onSliderEdgeThreshold                ( wxCommandEvent& event );
+    void onSliderEdgeThreshold         ( wxCommandEvent& event );
     bool SelectColor                        ( wxColour &col );
 	
 	
@@ -76,6 +77,7 @@ private:
 
     wxToggleButton		*m_pToggleFlashyEdges;
     wxToggleButton      *m_pToggleOrientationDep;
+    wxToggleButton      *m_pToggleShowFibers;
 
     wxButton            *m_pBtnClearConnectome;
     wxBitmapButton      *m_pbtnSelectColor;

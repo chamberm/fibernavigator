@@ -20,6 +20,9 @@ public:
     bool isLabelsReady() const { return m_isLabelsReady;}
     bool isEdgesReady() const { return m_isEdgesReady;}
     bool isReady() const { return m_isLabelsReady && m_isEdgesReady; }
+    bool isShowStreamlines() const {return m_isShowStreamlines;}
+    void setShowStreamlines(bool selected) { m_isShowStreamlines = selected;}
+    void toggleShowStreamlines() {m_isShowStreamlines = !m_isShowStreamlines;}
     
     bool isDirty() const     { return m_isDirty; }
     void setDirty( bool dirty )          { m_isDirty = dirty; }
@@ -47,6 +50,7 @@ private:
     bool m_isLabelsReady;
     bool m_isEdgesReady;
     bool m_isDirty;
+    bool m_isShowStreamlines;
 
     
 

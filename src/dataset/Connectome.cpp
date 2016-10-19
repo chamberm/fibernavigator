@@ -44,7 +44,8 @@ m_Edgemax(0),
 m_Edgemin(std::numeric_limits<int>::max()),
 m_NodeDegreeMax(1),
 m_Edgethreshold(0.0f),
-m_savedNodeColor(1.0f,0.0f,0.0f)
+m_savedNodeColor(1.0f,0.0f,0.0f),
+m_NbOfPickedNodes(0)
 {
 	std::cout<<"Connectome constructor"<<std::endl;
 
@@ -72,10 +73,11 @@ void Connectome::clearConnectome()
     Edges.clear();
     m_labelHist.clear();
     Nodes.clear();
+    m_fiberMatrix.clear();
 
     m_Globalstats.m_NbNodes = 0;
     m_Globalstats.m_NbEdges = 0;
-    m_Globalstats.m_Connectance = 0;
+    m_Globalstats.m_Density = 0;
 
     ConnectomeHelper::getInstance()->setEdgesReady(false);
     ConnectomeHelper::getInstance()->setLabelsReady(false);
@@ -141,9 +143,11 @@ void Connectome::setEdges(Fibers *edges)
     int nbFibers = m_fibers->getFibersCount();
 
     Edges.resize(m_NbLabels);
+    m_fiberMatrix.resize(m_NbLabels);
     for (unsigned int i=0; i<Edges.size();i++)
     {
         Edges[i].resize(m_NbLabels);
+        m_fiberMatrix[i].resize(m_NbLabels);
         for (unsigned int j=0; j<Edges[i].size(); j++)
         {
             Edges[i][j] = 0.0f;
@@ -154,6 +158,7 @@ void Connectome::setEdges(Fibers *edges)
     {        
         vector< Vector > currentFiberPoints;
         m_fibers->getFiberCoordValues(i, currentFiberPoints);
+        
         Vector A =  currentFiberPoints[0];
         Vector B = currentFiberPoints.back();
         
@@ -177,6 +182,7 @@ void Connectome::setEdges(Fibers *edges)
         {
             Edges[Ex-1][Ey-1] +=1;
             Edges[Ey-1][Ex-1] +=1;
+            m_fiberMatrix[Ex-1][Ey-1].push_back(i);
         }
     }
 
@@ -215,31 +221,45 @@ void Connectome::setEdges(Fibers *edges)
 
     std::cout << "Edge min.: " << m_Edgemin << " " << "Edge max.: " << m_Edgemax << std::endl;
 
+    computeNodeDegreeAndStrength();
     computeGlobalMetrics();
-    computeNodeDegree();
     ConnectomeHelper::getInstance()->setEdgesReady(true);
 }
 
-void Connectome::computeNodeDegree()
+void Connectome::computeNodeDegreeAndStrength()
 {
+    float sumDegree = 0;
+    int nbNodesActive = 0;
+    
     for (unsigned int i=0; i<Edges.size();i++)
     {
-        int deg = 0;
+        Nodes[i].degree = 0;
+        Nodes[i].strength = 0;
         for (unsigned int j=0; j<Edges[i].size(); j++)
         {
             if(Edges[i][j] > m_Edgethreshold && i!=j)
             {
-                deg++;
+                Nodes[i].degree++;
+                Nodes[i].strength+=Edges[i][j];
             }
         }
-        Nodes[i].degree = deg;
+
+        if(Nodes[i].degree > 0)
+        {
+            sumDegree += Nodes[i].degree;
+            nbNodesActive++;
+        }
         if(Nodes[i].picked)
         {
             ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(1,0,wxString::Format( wxT( "%i" ), i));
             ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(2,0,wxString::Format( wxT( "%i" ), Nodes[i].degree));
+            ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(3,0,wxString::Format( wxT( "%.3f" ), Nodes[i].strength));
         }
     }
 
+    m_Globalstats.m_meanDegree = sumDegree/nbNodesActive;
+
+    m_NodeDegreeMax = 1;
     for(unsigned int i=0; i<Edges.size();i++)
     {
         //Normalize node degree for visualization
@@ -337,17 +357,26 @@ void Connectome::displayPickedNodeMetrics(hitResult hr)
     if(Nodes[id].picked)
     {
         Nodes[id].color = Vector(1.0f, 1.0f, 1.0f);
+
+        m_NbOfPickedNodes++;
+
+
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(1,0,wxString::Format( wxT( "%i" ), id));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(2,0,wxString::Format( wxT( "%i" ), Nodes[id].degree));
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(3,0,wxString::Format( wxT( "%.3f" ), Nodes[id].strength));
     }
     else
     {
         Nodes[id].color = m_savedNodeColor;
+
+        m_NbOfPickedNodes--;
+
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(1,0,wxString::Format( wxT( "" ), wxT( "" )));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(2,0,wxString::Format( wxT( "" ), wxT( "" )));
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(3,0,wxString::Format( wxT( "" ), wxT( "" )));
     }
 
-    
+    setSelectedStreamlines();
 }
 
 void Connectome::renderEdges()
@@ -464,7 +493,7 @@ void Connectome::computeGlobalMetrics()
 
     m_Globalstats.m_NbNodes = nbNodes;
     m_Globalstats.m_NbEdges = totalEdges/2;
-    m_Globalstats.m_Connectance = float(totalEdges/2) / float((nbNodes)*(nbNodes-1));
+    m_Globalstats.m_Density = float(totalEdges) / float((nbNodes)*(nbNodes-1));
 
 }
 
@@ -472,4 +501,31 @@ void Connectome::renderGraph()
 {
     renderNodes();
     renderEdges();
+}
+
+void Connectome::setSelectedStreamlines()
+{
+    if(ConnectomeHelper::getInstance()->isShowStreamlines() && m_NbOfPickedNodes == 2)
+    {
+        m_selectedFibers.assign(m_fibers->getFibersCount(), false);
+        std::vector<int> id;
+        for(size_t i =0; i < Nodes.size(); i++)
+        {
+            if(Nodes[i].picked)
+            {
+                id.push_back(i);
+            }
+        }
+
+        for(size_t f=0; f<m_fiberMatrix[id[0]][id[1]].size(); f++)
+        {
+            int selectedFibersID = m_fiberMatrix[id[0]][id[1]][f];
+            m_selectedFibers[selectedFibersID] = true;
+        }
+        
+    }
+    else
+    {
+        m_selectedFibers.assign(m_fibers->getFibersCount(), false);
+    }
 }

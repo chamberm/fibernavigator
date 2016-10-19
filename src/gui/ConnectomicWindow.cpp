@@ -125,17 +125,23 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
 	pBoxRow6->Add( m_pTxtEdgeAlphaBox,   0, wxALIGN_CENTER | wxALL, 1);
 	m_pConnectomicSizer->Add( pBoxRow6, 0, wxFIXED_MINSIZE | wxEXPAND, 0 );
 
-    m_pToggleFlashyEdges = new wxToggleButton( this, wxID_ANY,wxT("Flashy edges OFF"), wxDefaultPosition, wxSize(120, -1) );
-    Connect( m_pToggleFlashyEdges->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::OnToggleFlashyEdges) );
+ //   m_pToggleFlashyEdges = new wxToggleButton( this, wxID_ANY,wxT("Flashy edges OFF"), wxDefaultPosition, wxSize(120, -1) );
+ //   Connect( m_pToggleFlashyEdges->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::OnToggleFlashyEdges) );
 
-    m_pToggleOrientationDep = new wxToggleButton( this, wxID_ANY,wxT("Orient. Dep. OFF"), wxDefaultPosition, wxSize(120, -1) );
-    Connect( m_pToggleOrientationDep->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::OnToggleOrientationDep) );
+ //   m_pToggleOrientationDep = new wxToggleButton( this, wxID_ANY,wxT("Orient. Dep. OFF"), wxDefaultPosition, wxSize(120, -1) );
+ //   Connect( m_pToggleOrientationDep->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::OnToggleOrientationDep) );
+
+ //   wxBoxSizer *pBoxRow7 = new wxBoxSizer( wxHORIZONTAL );
+	//pBoxRow7->Add( m_pToggleFlashyEdges, 0, wxALIGN_RIGHT | wxALL, 1 );
+ //   pBoxRow7->Add( m_pToggleOrientationDep, 0, wxALIGN_CENTER | wxALL, 1 );
+	//m_pConnectomicSizer->Add( pBoxRow7, 0,  wxFIXED_MINSIZE | wxALL, 2 );
+
+    m_pToggleShowFibers = new wxToggleButton( this, wxID_ANY,wxT("Show selected streamlines"), wxDefaultPosition, wxSize(230, -1) );
+    Connect( m_pToggleShowFibers->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::OnToggleShowFibers) );
 
     wxBoxSizer *pBoxRow7 = new wxBoxSizer( wxHORIZONTAL );
-	pBoxRow7->Add( m_pToggleFlashyEdges, 0, wxALIGN_RIGHT | wxALL, 1 );
-    pBoxRow7->Add( m_pToggleOrientationDep, 0, wxALIGN_CENTER | wxALL, 1 );
-    //pBoxRow7->Add( new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxSize(230,-1),wxHORIZONTAL,wxT("Separator")), 0, wxALIGN_RIGHT | wxALL, 1 );
-	m_pConnectomicSizer->Add( pBoxRow7, 0,  wxFIXED_MINSIZE | wxALL, 2 );
+    pBoxRow7->Add( m_pToggleShowFibers, 0, wxALIGN_RIGHT | wxALL, 1 );
+    m_pConnectomicSizer->Add( pBoxRow7, 0,  wxFIXED_MINSIZE | wxALL, 2 );
 
     wxTextCtrl *metricZone = new wxTextCtrl( this, wxID_ANY, wxT("Global graph metrics"), wxDefaultPosition, wxSize(230, -1), wxTE_CENTER | wxTE_READONLY );
     metricZone->SetBackgroundColour( *wxLIGHT_GREY );
@@ -160,13 +166,16 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
     font.SetWeight( wxFONTWEIGHT_BOLD );
     m_pGridGlobalInfo->SetFont( font );
     m_pGridGlobalInfo->SetColLabelSize( 2 );
-    m_pGridGlobalInfo->CreateGrid( 3, 1, wxGrid::wxGridSelectCells );
+    m_pGridGlobalInfo->CreateGrid( 6, 1, wxGrid::wxGridSelectCells );
     m_pGridGlobalInfo->SetColLabelValue( 0, wxT( "" ) );
     m_pGridGlobalInfo->SetRowLabelValue( 0, wxT( "# of nodes" ) );
     m_pGridGlobalInfo->SetRowLabelValue( 1, wxT( "# of edges" ) );
-    m_pGridGlobalInfo->SetRowLabelValue( 2, wxT( "Connectance" ) );
+    m_pGridGlobalInfo->SetRowLabelValue( 2, wxT( "Density" ) );
+    m_pGridGlobalInfo->SetRowLabelValue( 3, wxT( "Mean degree" ) );
+    m_pGridGlobalInfo->SetRowLabelValue( 4, wxT( "Global efficiency" ) );
+    m_pGridGlobalInfo->SetRowLabelValue( 5, wxT( "Transitivity" ) );
 
-    m_pGridGlobalInfo->SetRowLabelSize( 120 );
+    m_pGridGlobalInfo->SetRowLabelSize( 150 );
 
     m_pConnectomicSizer->Add( m_pGridGlobalInfo, 0, wxALIGN_CENTER | wxALL, 0 );
 
@@ -193,13 +202,19 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
     nodefont.SetWeight( wxFONTWEIGHT_BOLD );
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetFont( nodefont );
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetColLabelSize( 2 );
-    ConnectomeHelper::getInstance()->m_pGridNodeInfo->CreateGrid( 3, 1, wxGrid::wxGridSelectCells );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->CreateGrid( 9, 1, wxGrid::wxGridSelectCells );
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetColLabelValue( 0, wxT( "" ) );
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 0, wxT( "Name" ) );
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 1, wxT( "ID" ) );
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 2, wxT( "Degree" ) );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 3, wxT( "Strength" ) );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 4, wxT( "Eigen centrality" ) );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 5, wxT( "Closeness centrality" ) );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 6, wxT( "Betweenness centrality" ) );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 7, wxT( "Local efficiency" ) );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelValue( 8, wxT( "Clustering coefficient" ) );
 
-    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelSize( 120 );
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetRowLabelSize( 150 );
 
     m_pConnectomicSizer->Add( ConnectomeHelper::getInstance()->m_pGridNodeInfo, 0, wxALIGN_CENTER | wxALL, 0 );
 
@@ -249,10 +264,16 @@ void ConnectomicWindow::onSelectEdges( wxCommandEvent& event )
     {
         m_pBtnSelectEdges->SetLabel( pFibers->getName() );
         m_pBtnSelectEdges->SetBackgroundColour(wxNullColour);
-        ConnectomeHelper::getInstance()->getConnectome()->setEdges( (Fibers *)DatasetManager::getInstance()->getDataset( m_pMainFrame->m_pListCtrl->GetItem( item ) ) );
+        Fibers* fibers = (Fibers *)DatasetManager::getInstance()->getDataset( m_pMainFrame->m_pListCtrl->GetItem( item ) );
+
+        std::vector<bool> selected(fibers->getFibersCount(), false);
+        fibers->setSelected(selected);
+
+        ConnectomeHelper::getInstance()->getConnectome()->setEdges( fibers );
 
         m_pGridGlobalInfo->SetCellValue( 1,  0, wxString::Format( wxT( "%i" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_NbEdges        ) );
-        m_pGridGlobalInfo->SetCellValue( 2,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_Connectance       ) );
+        m_pGridGlobalInfo->SetCellValue( 2,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_Density       ) );
+        m_pGridGlobalInfo->SetCellValue( 3,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_meanDegree       ) );
         ConnectomeHelper::getInstance()->setEdgesSelected(true);
     }
 }
@@ -271,10 +292,12 @@ void ConnectomicWindow::onClearConnectome( wxCommandEvent& event )
     m_pGridGlobalInfo->SetCellValue( 0,  0, wxT( "" ) );
     m_pGridGlobalInfo->SetCellValue( 1,  0, wxT( "" ) );
     m_pGridGlobalInfo->SetCellValue( 2,  0, wxT( "" ) );
+    m_pGridGlobalInfo->SetCellValue( 3,  0, wxT( "" ) );
 
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 0,  0, wxT( "" )) ;
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 1,  0, wxT( "" ));
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 2,  0, wxT( "" ));
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 3,  0, wxT( "" ));
 
 }
 
@@ -314,12 +337,13 @@ void ConnectomicWindow::onSliderEdgeThreshold( wxCommandEvent& event )
     float sliderValue = m_pSliderEdgeThreshold->GetValue() / 1000.0f;
 	m_pTxtEdgeThresholdBox->SetValue( wxString::Format( wxT( "%.3f"), sliderValue ) );
 	ConnectomeHelper::getInstance()->getConnectome()->setEdgeThreshold( sliderValue );
-    ConnectomeHelper::getInstance()->getConnectome()->computeNodeDegree();
+    ConnectomeHelper::getInstance()->getConnectome()->computeNodeDegreeAndStrength();
     ConnectomeHelper::getInstance()->getConnectome()->computeGlobalMetrics();
 
     m_pGridGlobalInfo->SetCellValue( 0,  0, wxString::Format( wxT( "%i" ),   ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_NbNodes            ) );
     m_pGridGlobalInfo->SetCellValue( 1,  0, wxString::Format( wxT( "%i" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_NbEdges        ) );
-    m_pGridGlobalInfo->SetCellValue( 2,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_Connectance       ) );
+    m_pGridGlobalInfo->SetCellValue( 2,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_Density       ) );
+    m_pGridGlobalInfo->SetCellValue( 3,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_meanDegree       ) );
 
 }
 
@@ -388,6 +412,22 @@ void ConnectomicWindow::OnToggleFlashyEdges( wxCommandEvent& event )
 		m_pToggleFlashyEdges->SetLabel(wxT( "Flashy edges ON"));
     }
 }
+
+void ConnectomicWindow::OnToggleShowFibers( wxCommandEvent& event )
+{
+    ConnectomeHelper::getInstance()->toggleShowStreamlines();
+    ConnectomeHelper::getInstance()->getConnectome()->setSelectedStreamlines();
+
+    if( !ConnectomeHelper::getInstance()->isShowStreamlines())
+    {
+        m_pToggleShowFibers->SetLabel(wxT( "Show selected streamlines"));
+    }
+    else
+    {
+		m_pToggleShowFibers->SetLabel(wxT( "Hide selected streamlines"));
+    }
+}
+
 
 void ConnectomicWindow::OnToggleOrientationDep( wxCommandEvent& event )
 {

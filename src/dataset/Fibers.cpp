@@ -3715,6 +3715,11 @@ bool Fibers::isSelected( int fiberId )
     return m_selected[fiberId];
 }
 
+void Fibers::setSelected(std::vector<bool> selected)
+{
+    m_selected = selected;
+}
+
 float Fibers::getLocalizedAlpha( int index )
 {
     return m_localizedAlpha[index];

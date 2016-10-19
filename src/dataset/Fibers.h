@@ -77,6 +77,7 @@ public:
     int     getLineCount();
     int     getPointCount();
     bool    isSelected( int  fiberId );
+    void    setSelected(std::vector<bool> selected);
 
     float    getLocalizedAlpha( int index );
 

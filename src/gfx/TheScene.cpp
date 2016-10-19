@@ -691,6 +691,13 @@ void TheScene::renderFibers()
                     pFibers->updateLinesShown();
                 }
 
+                if(ConnectomeHelper::getInstance()->isEdgesSelected())
+                {
+                    std::vector<bool> selectedGraph = ConnectomeHelper::getInstance()->getConnectome()->getSelectedFibers();
+                    pFibers->setSelected(selectedGraph);                   
+                }
+                
+
                 if( pFibers->isUsingFakeTubes() )
                 {
                     pFibers->draw();
