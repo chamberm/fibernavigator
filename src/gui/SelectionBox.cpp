@@ -183,7 +183,7 @@ void SelectionBox::draw6()
 
 hitResult SelectionBox::hitTest( Ray* i_ray )
 {
-    hitResult hr = { false, 0.0f, 0, NULL };
+    hitResult hr = { false, 0.0f, 0, NULL, 0 };
 
     // TODO selection remove objectType
     if( m_isVisible && m_objectType == BOX_TYPE ) 

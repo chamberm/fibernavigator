@@ -40,11 +40,15 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
 	pBoxRow2->Add( m_pNbLabels, 0, wxALIGN_CENTER | wxALL, 1 );
 	m_pConnectomicSizer->Add( pBoxRow2, 0, wxFIXED_MINSIZE | wxEXPAND, 0 );
 
-    m_pBtnSelectLabels = new wxButton( this, wxID_ANY,wxT("Labels not selected"), wxDefaultPosition, wxSize(230, -1) );
+    m_pBtnSelectLabels = new wxButton( this, wxID_ANY,wxT("Nodes not selected"), wxDefaultPosition, wxSize(230, -1) );
 	Connect( m_pBtnSelectLabels->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::onSelectLabels) );
     m_pBtnSelectLabels->SetBackgroundColour(wxColour( 255, 147, 147 ));
 
-    m_pBtnSelectEdges = new wxButton( this, wxID_ANY,wxT("Tracts not selected"), wxDefaultPosition, wxSize(230, -1) );
+    m_pBtnLoadLabels = new wxButton( this, wxID_ANY,wxT("Load labels (.txt)"), wxDefaultPosition, wxSize(230, -1) );
+	pMf->Connect( m_pBtnLoadLabels->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MainFrame::onLoadLabels) );
+
+
+    m_pBtnSelectEdges = new wxButton( this, wxID_ANY,wxT("Edges not selected"), wxDefaultPosition, wxSize(230, -1) );
 	Connect( m_pBtnSelectEdges->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::onSelectEdges) );
     m_pBtnSelectEdges->SetBackgroundColour(wxColour( 255, 147, 147 ));
 
@@ -53,6 +57,7 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
 
 	wxBoxSizer *pBoxRow1 = new wxBoxSizer( wxVERTICAL );
 	pBoxRow1->Add( m_pBtnSelectLabels, 0, wxALIGN_CENTER | wxALL, 1 );
+    pBoxRow1->Add( m_pBtnLoadLabels, 0, wxALIGN_CENTER | wxALL, 1 );
     pBoxRow1->Add( m_pBtnSelectEdges, 0, wxALIGN_CENTER | wxALL, 1 );
     pBoxRow1->Add( m_pBtnClearConnectome, 0, wxALIGN_CENTER | wxALL, 1 );
     //pBoxRow1->Add( new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxSize(230,-1),wxHORIZONTAL,wxT("Separator")), 0, wxALIGN_RIGHT | wxALL, 1 );
@@ -128,18 +133,14 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
  //   m_pToggleFlashyEdges = new wxToggleButton( this, wxID_ANY,wxT("Flashy edges OFF"), wxDefaultPosition, wxSize(120, -1) );
  //   Connect( m_pToggleFlashyEdges->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::OnToggleFlashyEdges) );
 
- //   m_pToggleOrientationDep = new wxToggleButton( this, wxID_ANY,wxT("Orient. Dep. OFF"), wxDefaultPosition, wxSize(120, -1) );
- //   Connect( m_pToggleOrientationDep->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::OnToggleOrientationDep) );
-
- //   wxBoxSizer *pBoxRow7 = new wxBoxSizer( wxHORIZONTAL );
-	//pBoxRow7->Add( m_pToggleFlashyEdges, 0, wxALIGN_RIGHT | wxALL, 1 );
- //   pBoxRow7->Add( m_pToggleOrientationDep, 0, wxALIGN_CENTER | wxALL, 1 );
-	//m_pConnectomicSizer->Add( pBoxRow7, 0,  wxFIXED_MINSIZE | wxALL, 2 );
+    m_pToggleOrientationDep = new wxToggleButton( this, wxID_ANY,wxT("Enable depth sorting"), wxDefaultPosition, wxSize(230, -1) );
+    Connect( m_pToggleOrientationDep->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::OnToggleOrientationDep) );
 
     m_pToggleShowFibers = new wxToggleButton( this, wxID_ANY,wxT("Show selected streamlines"), wxDefaultPosition, wxSize(230, -1) );
     Connect( m_pToggleShowFibers->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::OnToggleShowFibers) );
 
-    wxBoxSizer *pBoxRow7 = new wxBoxSizer( wxHORIZONTAL );
+    wxBoxSizer *pBoxRow7 = new wxBoxSizer( wxVERTICAL );
+    pBoxRow7->Add( m_pToggleOrientationDep, 0, wxALIGN_CENTER | wxALL, 1 );
     pBoxRow7->Add( m_pToggleShowFibers, 0, wxALIGN_RIGHT | wxALL, 1 );
     m_pConnectomicSizer->Add( pBoxRow7, 0,  wxFIXED_MINSIZE | wxALL, 2 );
 
@@ -283,10 +284,10 @@ void ConnectomicWindow::onClearConnectome( wxCommandEvent& event )
     ConnectomeHelper::getInstance()->deleteConnectome();
     //ConnectomeHelper::getInstance()->getConnectome()->clearConnectome();
 
-	m_pBtnSelectLabels->SetLabel( wxT( "Labels not selected") );
+	m_pBtnSelectLabels->SetLabel( wxT( "Nodes not selected") );
     m_pBtnSelectLabels->SetBackgroundColour(wxColour(255, 147, 147));
     
-    m_pBtnSelectEdges->SetLabel( wxT( "Tracts not selected") );
+    m_pBtnSelectEdges->SetLabel( wxT( "Edges not selected") );
     m_pBtnSelectEdges->SetBackgroundColour(wxColour(255, 147, 147));
 
     m_pGridGlobalInfo->SetCellValue( 0,  0, wxT( "" ) );
@@ -435,10 +436,10 @@ void ConnectomicWindow::OnToggleOrientationDep( wxCommandEvent& event )
 
     if( !ConnectomeHelper::getInstance()->getConnectome()->isOrientationDep())
     {
-        m_pToggleOrientationDep->SetLabel(wxT( "Orient. Dep. OFF"));
+        m_pToggleOrientationDep->SetLabel(wxT( "Enable depth sorting"));
     }
     else
     {
-		m_pToggleOrientationDep->SetLabel(wxT( "Orient. Dep. ON"));
+		m_pToggleOrientationDep->SetLabel(wxT( "Disable depth sorting"));
     }
 }

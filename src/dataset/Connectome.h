@@ -31,12 +31,14 @@ struct GlobalGraphMetrics
 struct Node
 {
     Node():
+    name(wxT("")),
     center(0,0,0),
     size(1),
     color(1.0f, 0.0f, 0.0f),
     picked(false),
     degree(0),
-    strength(0.0f)
+    strength(0.0f),
+    eigen_centrality(0.0f)
 {
 }
     Vector center;
@@ -44,6 +46,7 @@ struct Node
     Vector color;
     bool picked;
 
+    wxString name;
     int degree;
     float strength;
     float eigen_centrality;
@@ -80,6 +83,7 @@ public:
     void displayPickedNodeMetrics( hitResult hr);
     std::vector<bool> getSelectedFibers() { return m_selectedFibers;}
     void setSelectedStreamlines();
+    void setLabelNames(std::vector<wxString> names);
 
     void computeNodeDegreeAndStrength();
     void computeGlobalMetrics();
@@ -120,6 +124,7 @@ private:
 
     int m_NbLabels;
     std::vector<std::vector<Vector> > m_labelHist;
+    std::vector<int> labelMapping;
     std::vector<std::vector<std::vector<int> > > m_fiberMatrix;
     std::vector<bool> m_selectedFibers;
     std::vector<Node> Nodes;

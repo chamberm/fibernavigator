@@ -226,7 +226,7 @@ void SelectionVOI::drawObject( GLfloat * pColor )
 
 hitResult SelectionVOI::hitTest( Ray* i_ray )
 {    
-    hitResult hr = { false, 0.0f, 0, NULL };
+    hitResult hr = { false, 0.0f, 0, NULL, 0 };
     
     m_hitResult = hr;
     

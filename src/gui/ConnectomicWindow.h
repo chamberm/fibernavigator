@@ -53,6 +53,7 @@ public:
 private:
     MainFrame           *m_pMainFrame;
 	wxButton            *m_pBtnSelectLabels;
+    wxButton            *m_pBtnLoadLabels;
     wxButton            *m_pBtnSelectEdges;
     wxTextCtrl          *m_pNbLabels;
     wxTextCtrl          *m_pTxtBoxNbLabels;

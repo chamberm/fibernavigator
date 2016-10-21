@@ -11,6 +11,7 @@ m_isLabelsReady( false ),
 m_isEdgesReady( false ),
 m_isDirty( true ),
 m_isShowStreamlines(false),
+m_isLabelNamesLoaded(false),
 m_Connectome( NULL )
 {
 

@@ -54,7 +54,7 @@ SelectionObject::SelectionObject()
 
 void SelectionObject::doBasicInit()
 {
-    hitResult hr = { false, 0.0f, 0, NULL };
+    hitResult hr = { false, 0.0f, 0, NULL, 0 };
     m_hitResult = hr;
     
     m_name = wxT("object");

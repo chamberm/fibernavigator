@@ -628,32 +628,39 @@ hitResult MainCanvas::pick( wxPoint click, bool isRulerOrDrawer)
     //hit nodes from graph?
     if( ConnectomeHelper::getInstance()->isLabelsReady() )
     {        
-        hr = ConnectomeHelper::getInstance()->getConnectome()->hitTest(ray);
+        hitResult hr1 = ConnectomeHelper::getInstance()->getConnectome()->hitTest(ray);
+        if ( hr1.hit && !hr.hit )
+        {
+            hr = hr1;
+        }
+        else if ( hr1.hit && hr.hit && ( hr1.tmin < hr.tmin ) )
+        {
+            hr = hr1;
+        }
     }
 
-    if(!hr.picked)
-    {
-            /*
-         * check for hits with the selection object sizers
-         */
-        if( SceneManager::getInstance()->getShowAllSelObj() )
-        {        
-            SelectionTree::SelectionObjectVector selectionObjects = SceneManager::getInstance()->getSelectionTree().getAllObjects();
+
+    /*
+    * check for hits with the selection object sizers
+    */
+    if( SceneManager::getInstance()->getShowAllSelObj() )
+    {        
+        SelectionTree::SelectionObjectVector selectionObjects = SceneManager::getInstance()->getSelectionTree().getAllObjects();
         
-            for ( unsigned int objIdx( 0 ); objIdx < selectionObjects.size(); ++objIdx )
+        for ( unsigned int objIdx( 0 ); objIdx < selectionObjects.size(); ++objIdx )
+        {
+            hitResult hr1 = selectionObjects[objIdx]->hitTest( ray );
+            if ( hr1.hit && !hr.hit )
             {
-                hitResult hr1 = selectionObjects[objIdx]->hitTest( ray );
-                if ( hr1.hit && !hr.hit )
-                {
-                    hr = hr1;
-                }
-                else if ( hr1.hit && hr.hit && ( hr1.tmin < hr.tmin ) )
-                {
-                    hr = hr1;
-                }
+                hr = hr1;
+            }
+            else if ( hr1.hit && hr.hit && ( hr1.tmin < hr.tmin ) )
+            {
+                hr = hr1;
             }
         }
     }
+
 
     
  

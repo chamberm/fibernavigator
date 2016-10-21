@@ -109,8 +109,24 @@ void Connectome::setLabels(Anatomy *labels)
 		}
 	}
 
+    labelMapping.resize(m_NbLabels);
+    int count=0;
+    for(size_t i = 0; i<m_labelHist.size(); i++)
+    {
+        if(m_labelHist[i].empty())
+        {
+            m_NbLabels--;
+        }
+        else
+        {
+            labelMapping[i] = count;
+            count++;
+        }
+    }
+
     Nodes.resize( m_NbLabels );
 
+    int l = 0;
     //Compute barycenter to display node
     for(unsigned int i=0; i<m_labelHist.size(); i++)
     {
@@ -129,7 +145,9 @@ void Connectome::setLabels(Anatomy *labels)
             float posX = sumX/m_labelHist[i].size()*m_voxelSizeX;
             float posY = sumY/m_labelHist[i].size()*m_voxelSizeY;
             float posZ = sumZ/m_labelHist[i].size()*m_voxelSizeZ;
-            Nodes[i].center = Vector(posX, posY, posZ);
+            Nodes[l].center = Vector(posX, posY, posZ);
+            l++;
+
         }
     }
 
@@ -141,6 +159,7 @@ void Connectome::setEdges(Fibers *edges)
 {
     m_fibers = edges;
     int nbFibers = m_fibers->getFibersCount();
+    m_selectedFibers.assign(m_fibers->getFibersCount(), false);
 
     Edges.resize(m_NbLabels);
     m_fiberMatrix.resize(m_NbLabels);
@@ -180,9 +199,9 @@ void Connectome::setEdges(Fibers *edges)
         int Ey = m_labels->atNonNorm(IdB);
         if(Ey != 0 && Ex != 0)
         {
-            Edges[Ex-1][Ey-1] +=1;
-            Edges[Ey-1][Ex-1] +=1;
-            m_fiberMatrix[Ex-1][Ey-1].push_back(i);
+            Edges[labelMapping[Ex-1]][labelMapping[Ey-1]] +=1;
+            Edges[labelMapping[Ey-1]][labelMapping[Ex-1]] +=1;
+            m_fiberMatrix[labelMapping[Ex-1]][labelMapping[Ey-1]].push_back(i);
         }
     }
 
@@ -220,16 +239,24 @@ void Connectome::setEdges(Fibers *edges)
     }
 
     std::cout << "Edge min.: " << m_Edgemin << " " << "Edge max.: " << m_Edgemax << std::endl;
-
+    
     computeNodeDegreeAndStrength();
     computeGlobalMetrics();
     ConnectomeHelper::getInstance()->setEdgesReady(true);
 }
-
+void Connectome::setLabelNames(std::vector<wxString> names)
+{
+    for(size_t i =0; i< Nodes.size(); i++)
+    {
+         Nodes[i].name = names[i];
+    }
+}
 void Connectome::computeNodeDegreeAndStrength()
 {
     float sumDegree = 0;
     int nbNodesActive = 0;
+    FMatrix T(Edges.size(),Edges.size());
+    std::vector<int> pickedNodes;
     
     for (unsigned int i=0; i<Edges.size();i++)
     {
@@ -239,8 +266,9 @@ void Connectome::computeNodeDegreeAndStrength()
         {
             if(Edges[i][j] > m_Edgethreshold && i!=j)
             {
-                Nodes[i].degree++;
-                Nodes[i].strength+=Edges[i][j];
+                Nodes[i].degree++; //Node degree 
+                Nodes[i].strength+=Edges[i][j]; //Node strength
+                T(i,j) = Edges[i][j];
             }
         }
 
@@ -251,13 +279,50 @@ void Connectome::computeNodeDegreeAndStrength()
         }
         if(Nodes[i].picked)
         {
+            pickedNodes.push_back(i);
+            ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(0,0,Nodes[i].name);
             ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(1,0,wxString::Format( wxT( "%i" ), i));
             ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(2,0,wxString::Format( wxT( "%i" ), Nodes[i].degree));
             ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(3,0,wxString::Format( wxT( "%.3f" ), Nodes[i].strength));
         }
     }
 
-    m_Globalstats.m_meanDegree = sumDegree/nbNodesActive;
+    //Eigen Centrality
+    std::vector< FArray > evecs;
+    FArray evals;
+    T.getEigenSystem( evals, evecs);
+
+    //find Max eval
+    float max = 0;
+    int maxEvalID;
+    for(size_t i=0; i<evals.size(); i++)
+    {
+        if(evals(i)>max)
+        {
+            max = evals(i);
+            maxEvalID = i;
+        }
+    }
+    /*for(int i = 0; i < evals.size();i++)
+        std::cout << evals(i) << std::endl;
+
+    std::cout<<maxEvalID<< " " << evals(maxEvalID);*/
+
+    //std::cout<<"EVECS";
+    //for(int i = 0; i < evecs[evals.size()-1].size();i++)
+    //    std::cout << evecs[evals.size()-1][i] << std::endl;
+        
+    for(size_t i=0; i<Nodes.size();i++)
+    {
+        Nodes[i].eigen_centrality = evecs[maxEvalID][i];
+        if(Nodes[i].picked)
+        {
+            ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(4,0,wxString::Format( wxT( "%.3f" ), Nodes[i].eigen_centrality));
+        }
+    }
+
+
+    m_Globalstats.m_meanDegree = sumDegree/nbNodesActive; //Graph mean degree
 
     m_NodeDegreeMax = 1;
     for(unsigned int i=0; i<Edges.size();i++)
@@ -278,8 +343,70 @@ void Connectome::setNodeColor( wxColour color )
         Nodes[i].color = m_savedNodeColor;
     }
 }
+
+namespace
+{
+template< class T > struct IndirectComp
+{
+    IndirectComp( const T &zvals ) :
+        zvals( zvals )
+    {
+    }
+
+    // Watch out: operator less, but we are sorting in descending z-order, i.e.,
+    // highest z value will be first in array and painted first as well
+    template< class I > bool operator()( const I &i1, const I &i2 ) const
+    {
+        return zvals[i1] > zvals[i2];
+    }
+
+private:
+    const T &zvals;
+};
+}
+
 void Connectome::renderNodes()
 {
+    float zMax = -999.0f;
+    float zMin = 999.0f;
+    size_t siz = Nodes.size();
+    vector< float > zVals( siz );
+    if(m_isOrientationDep)
+    {
+        GLfloat projMatrix[16];
+        glGetFloatv( GL_PROJECTION_MATRIX, projMatrix );
+        
+
+        // Compute z values of lines (in our case: starting points only).
+        
+
+        unsigned int *pSnippletSort = NULL;
+        pSnippletSort = new unsigned int[siz + 1];
+     
+        for(unsigned int i = 0; i < siz; ++i )
+        {
+            zVals[i] = ( Nodes[i].center.x * projMatrix[2] + Nodes[i].center.y * projMatrix[6]
+                            + Nodes[i].center.z * projMatrix[10] + projMatrix[14] ) / ( Nodes[i].center.x * projMatrix[3]
+                                    + Nodes[i].center.y * projMatrix[7] + Nodes[i].center.z * projMatrix[11] + projMatrix[15] );
+            pSnippletSort[i] = i;
+        }
+
+        sort( &pSnippletSort[0], &pSnippletSort[siz], IndirectComp< vector< float > > ( zVals ) );
+
+        
+        for(size_t i =0; i<zVals.size(); i++)
+        {
+            if(zVals[i] > zMax)
+            {
+                zMax = zVals[i];
+            }
+            if(zVals[i] < zMin)
+            {
+                zMin = zVals[i];
+            }
+        }
+    }
+
     for (unsigned int i=0; i<Nodes.size(); i++)
     {
         /*glDepthMask(GL_FALSE);
@@ -296,7 +423,11 @@ void Connectome::renderNodes()
             }
             //nodes
 
-            glColor4f(Nodes[i].color.x, Nodes[i].color.y, Nodes[i].color.z, m_nodeAlpha);
+            float depth = 1.0f;
+            if(m_isOrientationDep)
+                depth = 1 - ((zVals[i] - zMin) / (zMax - zMin));
+
+            glColor4f(Nodes[i].color.x*depth, Nodes[i].color.y*depth, Nodes[i].color.z*depth, m_nodeAlpha);
 
             Nodes[i].size = m_nodeSize;
             if(ConnectomeHelper::getInstance()->isEdgesReady())
@@ -321,7 +452,7 @@ void Connectome::renderNodes()
 
 hitResult Connectome::hitTest(Ray* i_ray)
 {
-    hitResult hr = { false, 0.0f, 0, NULL };
+    hitResult hr = { false, 0.0f, 0, NULL, 0 };
 
     for(unsigned int i=0; i < Nodes.size(); i++)
     {
@@ -339,7 +470,7 @@ hitResult Connectome::hitTest(Ray* i_ray)
             if( hr.hit )
             {
                 hr.picked = 100;
-                hr.tmin = i;
+                hr.obj = i;
                 
                 break;
             }
@@ -351,7 +482,7 @@ hitResult Connectome::hitTest(Ray* i_ray)
 
 void Connectome::displayPickedNodeMetrics(hitResult hr)
 {
-    int id = hr.tmin;
+    int id = hr.obj;
     Nodes[id].picked = !Nodes[id].picked;
 
     if(Nodes[id].picked)
@@ -360,10 +491,11 @@ void Connectome::displayPickedNodeMetrics(hitResult hr)
 
         m_NbOfPickedNodes++;
 
-
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(0,0,Nodes[id].name);
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(1,0,wxString::Format( wxT( "%i" ), id));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(2,0,wxString::Format( wxT( "%i" ), Nodes[id].degree));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(3,0,wxString::Format( wxT( "%.3f" ), Nodes[id].strength));
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(4,0,wxString::Format( wxT( "%.3f" ), Nodes[id].eigen_centrality));
     }
     else
     {
@@ -371,12 +503,15 @@ void Connectome::displayPickedNodeMetrics(hitResult hr)
 
         m_NbOfPickedNodes--;
 
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(0,0,wxString::Format( wxT( "" ), wxT( "" )));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(1,0,wxString::Format( wxT( "" ), wxT( "" )));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(2,0,wxString::Format( wxT( "" ), wxT( "" )));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(3,0,wxString::Format( wxT( "" ), wxT( "" )));
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(4,0,wxString::Format( wxT( "" ), wxT( "" )));
     }
 
-    setSelectedStreamlines();
+    if(ConnectomeHelper::getInstance()->isEdgesReady())
+        setSelectedStreamlines();
 }
 
 void Connectome::renderEdges()
@@ -424,25 +559,25 @@ void Connectome::renderEdges()
                 normalVector.normalize();
 
                 
-                if(m_isOrientationDep)
-                {
-                    //View vector
-                    Matrix4fT transform = SceneManager::getInstance()->getTransform();
-                    float dots[8];
-                    Vector3fT v1 = { { 0, 0, 1 } };
-                    Vector3fT v2 = { { 1, 1, 1 } };
-                    Vector3fT view;
+        //        if(m_isOrientationDep)
+        //        {
+        //            //View vector
+        //            Matrix4fT transform = SceneManager::getInstance()->getTransform();
+        //            float dots[8];
+        //            Vector3fT v1 = { { 0, 0, 1 } };
+        //            Vector3fT v2 = { { 1, 1, 1 } };
+        //            Vector3fT view;
 
-                    Vector3fMultMat4( &view, &v1, &transform );
-                    dots[0] = Vector3fDot( &v2, &view );
-            
-			        Vector zVector;
-				    zVector = Vector(view.s.X, view.s.Y, view.s.Z); 
-				    zVector.normalize();
-			            
-				    alphaValue = 1-std::abs(normalVector.Dot(zVector)); 
-                    alphaValue = std::pow(alphaValue,3.0f);
-                }
+        //            Vector3fMultMat4( &view, &v1, &transform );
+        //            dots[0] = Vector3fDot( &v2, &view );
+        //    
+			     //   Vector zVector;
+				    //zVector = Vector(view.s.X, view.s.Y, view.s.Z); 
+				    //zVector.normalize();
+			     //       
+				    //alphaValue = 1-std::abs(normalVector.Dot(zVector)); 
+        //            alphaValue = std::pow(alphaValue,3.0f);
+        //        }
 
                 if(alphaValue != 1.0f)
 		        {

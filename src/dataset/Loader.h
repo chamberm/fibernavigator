@@ -7,9 +7,15 @@
 #include "../gui/ListCtrl.h"
 #include "../gui/MainFrame.h"
 #include "../gui/SceneManager.h"
+#include "ConnectomeHelper.h"
 
 #include <wx/file.h>
 #include <wx/string.h>
+#include <iostream>
+#include <fstream>
+#include <string>
+
+using namespace std;
 
 class Loader
 {
@@ -55,69 +61,91 @@ public:
 
             wxString name = filename.AfterLast( separator );
 
-            if( wxT( "gz" ) == extension )
+            if(wxT( "txt" ) == extension )
             {
-                extension = filename.BeforeLast( '.' ).AfterLast( '.' );
-            }
+                std::cout << "Reading .txt file" << std::endl;
+                
+                std::ifstream file;
+                file.open(filename.ToStdString());
+                if (!file.is_open()) return;
 
-            if( wxT( "scn" ) == extension )
-            {
-                if( !SceneManager::getInstance()->load( filename ) )
+                string word;
+                vector<wxString> labels;
+                while (file >> word)
                 {
-                    ++m_error;
+                    file >> word;
+                    labels.push_back(wxString(word));
                 }
+                ConnectomeHelper::getInstance()->getConnectome()->setLabelNames(labels);
 
-                m_pMainFrame->GetStatusBar()->SetStatusText( wxT( "Ready" ), 1 );
-                m_pMainFrame->GetStatusBar()->SetStatusText( wxString::Format( wxT( "%s loaded" ), name.c_str() ), 2 );
             }
             else
             {
-                DatasetManager::getInstance()->forceLoadingAsMaximas( m_loadAsPeaks );
-                DatasetManager::getInstance()->forceLoadingAsRestingState( m_loadAsRestingState );
-                
-                DatasetIndex result = DatasetManager::getInstance()->load( filename, extension );
-                
-                DatasetManager::getInstance()->forceLoadingAsMaximas( false );
-                DatasetManager::getInstance()->forceLoadingAsRestingState( false );
-                
-                if( result.isOk() )
+
+                if( wxT( "gz" ) == extension )
                 {
-                    DatasetInfo *pDataset = DatasetManager::getInstance()->getDataset( result );
+                    extension = filename.BeforeLast( '.' ).AfterLast( '.' );
+                }
 
-                    switch( pDataset->getType() )
+                if( wxT( "scn" ) == extension )
+                {
+                    if( !SceneManager::getInstance()->load( filename ) )
                     {
-                        case HEAD_BYTE:
-                        case HEAD_SHORT:
-                        case OVERLAY:
-                        case RGB:
-                        {
-                            if( 1 == DatasetManager::getInstance()->getAnatomyCount() )
-                            {
-                                m_pMainFrame->updateSliders();
-                            }
-                            break;
-                        }
-                        case FIBERS:
-                        {
-                            if( !DatasetManager::getInstance()->isFibersGroupLoaded() )
-                            {
-                                DatasetIndex result = DatasetManager::getInstance()->createFibersGroup();
-                                m_pListCtrl->InsertItem( result );
-                            }
-                            break;
-                        }
-                        default:
-                            break;
+                        ++m_error;
                     }
-
-                    m_pListCtrl->InsertItem( result );
 
                     m_pMainFrame->GetStatusBar()->SetStatusText( wxT( "Ready" ), 1 );
                     m_pMainFrame->GetStatusBar()->SetStatusText( wxString::Format( wxT( "%s loaded" ), name.c_str() ), 2 );
                 }
                 else
                 {
-                    ++m_error;
+                    DatasetManager::getInstance()->forceLoadingAsMaximas( m_loadAsPeaks );
+                    DatasetManager::getInstance()->forceLoadingAsRestingState( m_loadAsRestingState );
+                
+                    DatasetIndex result = DatasetManager::getInstance()->load( filename, extension );
+                
+                    DatasetManager::getInstance()->forceLoadingAsMaximas( false );
+                    DatasetManager::getInstance()->forceLoadingAsRestingState( false );
+                
+                    if( result.isOk() )
+                    {
+                        DatasetInfo *pDataset = DatasetManager::getInstance()->getDataset( result );
+
+                        switch( pDataset->getType() )
+                        {
+                            case HEAD_BYTE:
+                            case HEAD_SHORT:
+                            case OVERLAY:
+                            case RGB:
+                            {
+                                if( 1 == DatasetManager::getInstance()->getAnatomyCount() )
+                                {
+                                    m_pMainFrame->updateSliders();
+                                }
+                                break;
+                            }
+                            case FIBERS:
+                            {
+                                if( !DatasetManager::getInstance()->isFibersGroupLoaded() )
+                                {
+                                    DatasetIndex result = DatasetManager::getInstance()->createFibersGroup();
+                                    m_pListCtrl->InsertItem( result );
+                                }
+                                break;
+                            }
+                            default:
+                                break;
+                        }
+
+                        m_pListCtrl->InsertItem( result );
+
+                        m_pMainFrame->GetStatusBar()->SetStatusText( wxT( "Ready" ), 1 );
+                        m_pMainFrame->GetStatusBar()->SetStatusText( wxString::Format( wxT( "%s loaded" ), name.c_str() ), 2 );
+                    }
+                    else
+                    {
+                        ++m_error;
+                    }
                 }
             }
         }
