@@ -52,6 +52,7 @@ struct Node
     float eigen_centrality;
     float closeness_centrality;
     float betweenness_centrality;
+    std::vector<float> min_dist;
 };
 
 class Connectome
@@ -93,6 +94,9 @@ public:
     void clearConnectome();
     GlobalGraphMetrics getGlobalStats() {return m_Globalstats;}
 
+    void dijkstra(int src);
+    int minDistance(std::vector<float> dist, std::vector<bool> sptSet);
+
 
 protected:
     GlobalGraphMetrics        m_Globalstats;
@@ -121,6 +125,7 @@ private:
     float m_Edgethreshold;
     Vector m_savedNodeColor;
     int m_NbOfPickedNodes;
+    int m_nbNodesActive;
 
     int m_NbLabels;
     std::vector<std::vector<Vector> > m_labelHist;

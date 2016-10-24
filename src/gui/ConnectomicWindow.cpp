@@ -275,6 +275,7 @@ void ConnectomicWindow::onSelectEdges( wxCommandEvent& event )
         m_pGridGlobalInfo->SetCellValue( 1,  0, wxString::Format( wxT( "%i" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_NbEdges        ) );
         m_pGridGlobalInfo->SetCellValue( 2,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_Density       ) );
         m_pGridGlobalInfo->SetCellValue( 3,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_meanDegree       ) );
+        m_pGridGlobalInfo->SetCellValue( 4,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_globalEfficiency       ) );
         ConnectomeHelper::getInstance()->setEdgesSelected(true);
     }
 }
@@ -294,12 +295,15 @@ void ConnectomicWindow::onClearConnectome( wxCommandEvent& event )
     m_pGridGlobalInfo->SetCellValue( 1,  0, wxT( "" ) );
     m_pGridGlobalInfo->SetCellValue( 2,  0, wxT( "" ) );
     m_pGridGlobalInfo->SetCellValue( 3,  0, wxT( "" ) );
+    m_pGridGlobalInfo->SetCellValue( 4,  0, wxT( "" ) );
 
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 0,  0, wxT( "" )) ;
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 1,  0, wxT( "" ));
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 2,  0, wxT( "" ));
     ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 3,  0, wxT( "" ));
 
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 4,  0, wxT( "" ));
+    ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue( 5,  0, wxT( "" ));
 }
 
 void ConnectomicWindow::OnNbLabels( wxCommandEvent& event )
@@ -338,13 +342,18 @@ void ConnectomicWindow::onSliderEdgeThreshold( wxCommandEvent& event )
     float sliderValue = m_pSliderEdgeThreshold->GetValue() / 1000.0f;
 	m_pTxtEdgeThresholdBox->SetValue( wxString::Format( wxT( "%.3f"), sliderValue ) );
 	ConnectomeHelper::getInstance()->getConnectome()->setEdgeThreshold( sliderValue );
-    ConnectomeHelper::getInstance()->getConnectome()->computeNodeDegreeAndStrength();
-    ConnectomeHelper::getInstance()->getConnectome()->computeGlobalMetrics();
+
+    if(ConnectomeHelper::getInstance()->isEdgesReady())
+    {
+        ConnectomeHelper::getInstance()->getConnectome()->computeNodeDegreeAndStrength();
+        ConnectomeHelper::getInstance()->getConnectome()->computeGlobalMetrics();
+    }
 
     m_pGridGlobalInfo->SetCellValue( 0,  0, wxString::Format( wxT( "%i" ),   ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_NbNodes            ) );
     m_pGridGlobalInfo->SetCellValue( 1,  0, wxString::Format( wxT( "%i" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_NbEdges        ) );
     m_pGridGlobalInfo->SetCellValue( 2,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_Density       ) );
     m_pGridGlobalInfo->SetCellValue( 3,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_meanDegree       ) );
+    m_pGridGlobalInfo->SetCellValue( 4,  0, wxString::Format( wxT( "%.3f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_globalEfficiency       ) );
 
 }
 

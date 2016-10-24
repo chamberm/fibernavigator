@@ -45,7 +45,8 @@ m_Edgemin(std::numeric_limits<int>::max()),
 m_NodeDegreeMax(1),
 m_Edgethreshold(0.0f),
 m_savedNodeColor(1.0f,0.0f,0.0f),
-m_NbOfPickedNodes(0)
+m_NbOfPickedNodes(0),
+m_nbNodesActive(0)
 {
 	std::cout<<"Connectome constructor"<<std::endl;
 
@@ -78,8 +79,10 @@ void Connectome::clearConnectome()
     m_Globalstats.m_NbNodes = 0;
     m_Globalstats.m_NbEdges = 0;
     m_Globalstats.m_Density = 0;
+    m_Globalstats.m_Density = 0;
 
     ConnectomeHelper::getInstance()->setEdgesReady(false);
+    ConnectomeHelper::getInstance()->setEdgesSelected(false);
     ConnectomeHelper::getInstance()->setLabelsReady(false);
       
 }
@@ -146,6 +149,7 @@ void Connectome::setLabels(Anatomy *labels)
             float posY = sumY/m_labelHist[i].size()*m_voxelSizeY;
             float posZ = sumZ/m_labelHist[i].size()*m_voxelSizeZ;
             Nodes[l].center = Vector(posX, posY, posZ);
+            Nodes[l].min_dist.resize(m_NbLabels);
             l++;
 
         }
@@ -254,7 +258,7 @@ void Connectome::setLabelNames(std::vector<wxString> names)
 void Connectome::computeNodeDegreeAndStrength()
 {
     float sumDegree = 0;
-    int nbNodesActive = 0;
+    m_nbNodesActive = 0;
     FMatrix T(Edges.size(),Edges.size());
     std::vector<int> pickedNodes;
     
@@ -275,7 +279,7 @@ void Connectome::computeNodeDegreeAndStrength()
         if(Nodes[i].degree > 0)
         {
             sumDegree += Nodes[i].degree;
-            nbNodesActive++;
+            m_nbNodesActive++;
         }
         if(Nodes[i].picked)
         {
@@ -317,12 +321,14 @@ void Connectome::computeNodeDegreeAndStrength()
         Nodes[i].eigen_centrality = evecs[maxEvalID][i];
         if(Nodes[i].picked)
         {
+            dijkstra(i);
+            ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(5,0,wxString::Format( wxT( "%.3f" ), Nodes[i].closeness_centrality));
             ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(4,0,wxString::Format( wxT( "%.3f" ), Nodes[i].eigen_centrality));
         }
     }
 
 
-    m_Globalstats.m_meanDegree = sumDegree/nbNodesActive; //Graph mean degree
+    m_Globalstats.m_meanDegree = sumDegree/m_nbNodesActive; //Graph mean degree
 
     m_NodeDegreeMax = 1;
     for(unsigned int i=0; i<Edges.size();i++)
@@ -480,6 +486,72 @@ hitResult Connectome::hitTest(Ray* i_ray)
     return hr;
 }
 
+// A utility function to find the vertex with minimum distance value, from
+// the set of vertices not yet included in shortest path tree
+int Connectome::minDistance(std::vector<float> dist, std::vector<bool> sptSet)
+{
+   // Initialize min value
+   float min = std::numeric_limits<float>::infinity();
+   int min_index;
+  
+   for (int v = 0; v < m_NbLabels; v++)
+     if (sptSet[v] == false && dist[v] <= min)
+         min = dist[v], min_index = v;
+  
+   return min_index;
+}
+
+void Connectome::dijkstra(int src)
+{ 
+    std::vector<bool> sptSet(m_NbLabels); // sptSet[i] will true if vertex i is included in shortest // path tree or shortest distance from src to i is finalized
+  
+    // Initialize all distances as INFINITE and stpSet[] as false
+    for (int i = 0; i < m_NbLabels; i++)
+    {
+        Nodes[src].min_dist[i] = std::numeric_limits<float>::infinity(), sptSet[i] = false;
+    }
+  
+    // Distance of source vertex from itself is always 0
+    Nodes[src].min_dist[src] = 0;
+  
+    // Find shortest path for all vertices
+    for (int count = 0; count < m_NbLabels-1; count++)
+    {
+        // Pick the minimum distance vertex from the set of vertices not
+        // yet processed. u is always equal to src in first iteration.
+        int u = minDistance(Nodes[src].min_dist, sptSet);
+  
+        // Mark the picked vertex as processed
+        sptSet[u] = true;
+  
+        // Update dist value of the adjacent vertices of the picked vertex.
+        for (int v = 0; v < m_NbLabels; v++)
+        {
+            // Update dist[v] only if is not in sptSet, there is an edge from 
+            // u to v, and total weight of path from src to  v through u is 
+            // smaller than current value of dist[v]
+            if (!sptSet[v] && Edges[u][v] > m_Edgethreshold && Nodes[src].min_dist[u] != std::numeric_limits<float>::infinity() && Nodes[src].min_dist[u]+(1/Edges[u][v]) < Nodes[src].min_dist[v])
+            {
+                Nodes[src].min_dist[v] = Nodes[src].min_dist[u] + (1/Edges[u][v]);
+            }
+        }
+    }
+  
+    //set closeness
+    float sum = 0.0f;
+    for(int i=0; i< m_NbLabels; i++)
+    {
+        if(i!=src && Edges[src][i] > m_Edgethreshold)
+            sum += 1/Nodes[src].min_dist[i];
+    }
+    Nodes[src].closeness_centrality = sum/float(m_nbNodesActive-1);
+
+     // print the constructed distance array
+    //printf("Vertex   Distance from Source\n");
+    //for (int i = 0; i < m_NbLabels; i++)
+    //  std::cout<< i << " " << Nodes[src].min_dist[i] << std::endl;
+}
+
 void Connectome::displayPickedNodeMetrics(hitResult hr)
 {
     int id = hr.obj;
@@ -491,11 +563,17 @@ void Connectome::displayPickedNodeMetrics(hitResult hr)
 
         m_NbOfPickedNodes++;
 
+        if(ConnectomeHelper::getInstance()->isEdgesReady())
+        {
+            dijkstra(id);
+        }
+
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(0,0,Nodes[id].name);
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(1,0,wxString::Format( wxT( "%i" ), id));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(2,0,wxString::Format( wxT( "%i" ), Nodes[id].degree));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(3,0,wxString::Format( wxT( "%.3f" ), Nodes[id].strength));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(4,0,wxString::Format( wxT( "%.3f" ), Nodes[id].eigen_centrality));
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(5,0,wxString::Format( wxT( "%.3f" ), Nodes[id].closeness_centrality));
     }
     else
     {
@@ -508,10 +586,13 @@ void Connectome::displayPickedNodeMetrics(hitResult hr)
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(2,0,wxString::Format( wxT( "" ), wxT( "" )));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(3,0,wxString::Format( wxT( "" ), wxT( "" )));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(4,0,wxString::Format( wxT( "" ), wxT( "" )));
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(5,0,wxString::Format( wxT( "" ), wxT( "" )));
     }
 
     if(ConnectomeHelper::getInstance()->isEdgesReady())
-        setSelectedStreamlines();
+    {
+        setSelectedStreamlines();  
+    }
 }
 
 void Connectome::renderEdges()
@@ -537,10 +618,10 @@ void Connectome::renderEdges()
                     edgeSize = 0;
                     alphaValue = 0.1f;
 			    }
-                else if(v > 0.33f && v < 0.66f)
+                else if(v >= 0.33f && v <= 0.66f)
                 {
 				    R = (v-0.33f)/(0.66f-0.33f);
-				    G = 1.0f - (v-0.33f)/(0.66f-0.33f);
+				    G = 1.0f - ((v-0.33f)/(0.66f-0.33f));
 				    B = 1.0f;
                     edgeSize = 1;
                     alphaValue = 0.8f;
@@ -548,10 +629,10 @@ void Connectome::renderEdges()
                 else
                 {
                     R = 1.0f;
-				    G = 1.0f-((v-0.66f)/(1.0f-0.66f));
+				    G = 0.0f;
 				    B = 1.0f-((v-0.66f)/(1.0f-0.66f));
                     edgeSize = 2;
-                    alphaValue = 1.0f;
+                    alphaValue = 0.9f;
                 }
                 
                 //Local vector
@@ -611,6 +692,9 @@ void Connectome::computeGlobalMetrics()
     int totalEdges = 0;
     for (unsigned int i=0; i<Edges.size(); i++)
     {
+        //Dijsktra
+        dijkstra(i);
+        //basic metrics
         float sumEdge = 0.0f;
         for(unsigned int j=0; j<Edges[i].size();j++)
         {
@@ -626,9 +710,20 @@ void Connectome::computeGlobalMetrics()
         totalEdges+=sumEdge;
     }
 
+    float sum = 0.0f;
+    for(size_t i=0; i < Nodes.size(); i++)
+    {
+        for (size_t j =0; j< Nodes[i].min_dist.size(); j++)
+        {
+            if(Edges[i][j] > m_Edgethreshold && j!=i)
+                sum+= 1/Nodes[i].min_dist[j];
+        }
+    }
+
     m_Globalstats.m_NbNodes = nbNodes;
     m_Globalstats.m_NbEdges = totalEdges/2;
     m_Globalstats.m_Density = float(totalEdges) / float((nbNodes)*(nbNodes-1));
+    m_Globalstats.m_globalEfficiency = sum/float(nbNodes*(nbNodes-1));
 
 }
 
