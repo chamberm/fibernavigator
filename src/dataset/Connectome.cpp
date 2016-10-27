@@ -321,9 +321,19 @@ void Connectome::computeNodeDegreeAndStrength()
         Nodes[i].eigen_centrality = evecs[maxEvalID][i];
         if(Nodes[i].picked)
         {
-            dijkstra(i);
-            ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(5,0,wxString::Format( wxT( "%.3f" ), Nodes[i].closeness_centrality));
+            //closeness
+            dijkstra(i, m_NbLabels, Edges, Nodes[i].min_dist);
+            Nodes[i].closeness_centrality = closenessCentrality(i);
+
+            if(Nodes[i].picked)
+            {
+                Nodes[i].local_efficiency = localEfficiency(i);
+            }
+
+            //local eff
             ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(4,0,wxString::Format( wxT( "%.3f" ), Nodes[i].eigen_centrality));
+            ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(5,0,wxString::Format( wxT( "%.3f" ), Nodes[i].closeness_centrality));
+            ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(7,0,wxString::Format( wxT( "%.3f" ), Nodes[i].local_efficiency));
         }
     }
 
@@ -340,6 +350,86 @@ void Connectome::computeNodeDegreeAndStrength()
             m_NodeDegreeMax = tmpMax;
         }
     }
+}
+
+float Connectome::localEfficiency(int id)
+{
+    //local eff (need to remove node before dijkstra)
+    //do sub graph of nodes touching i
+    float result;
+    vector<vector<float> > subGraph;
+    vector<int> neighborsID;
+    for(size_t s=0; s < Edges[id].size(); s++)
+    {
+        if(Edges[id][s] > m_Edgethreshold && id!=s)
+        {
+            neighborsID.push_back(s);
+        }
+    }
+
+    int nbNeighbors = neighborsID.size();
+    subGraph.resize(nbNeighbors);
+    for(size_t s = 0; s < subGraph.size(); s++)
+        subGraph[s].resize(nbNeighbors);
+
+    for(size_t s = 0; s< subGraph.size(); s++)
+    {
+        for(size_t t = 0; t< subGraph.size(); t++)
+        {
+            if(s!=t && Edges[neighborsID[s]][neighborsID[t]] > m_Edgethreshold)
+            {
+                subGraph[s][t] = Edges[neighborsID[s]][neighborsID[t]];
+            }
+        }
+    }
+    
+    if(subGraph.size() > 1)
+    {
+        //dijkstra
+        vector<float> minDists(nbNeighbors);
+        std::vector<vector<float> > minDistMatrix;
+        for(int s = 0; s < nbNeighbors; s++)
+        {
+            dijkstra(s, nbNeighbors, subGraph, minDists);
+            minDistMatrix.push_back(minDists);
+        }
+
+        float sum = 0.0f;
+        for(size_t i=0; i< minDistMatrix.size(); i++)
+        {
+            for(size_t j=0; j< minDistMatrix[i].size(); j++)
+            {
+                if(i!=j)
+                {
+                    if(minDistMatrix[i][j]!=0)
+                        sum += 1/minDistMatrix[i][j];
+                    else
+                        sum+=1;
+                }
+            }
+        }
+    
+        result = sum/float(minDists.size()*(minDists.size()-1));
+    }
+    else
+    {
+        result = 0;
+    }
+
+    return result;
+    
+}
+
+float Connectome::closenessCentrality(int nodeID)
+{
+    //set closeness
+    float sum = 0.0f;
+    for(int i=0; i< m_NbLabels; i++)
+    {
+        if(i!=nodeID && Nodes[nodeID].min_dist[i]!=0)
+            sum += 1/Nodes[nodeID].min_dist[i];
+    }
+    return sum/float(m_nbNodesActive-1);
 }
 void Connectome::setNodeColor( wxColour color )
 {
@@ -488,64 +578,55 @@ hitResult Connectome::hitTest(Ray* i_ray)
 
 // A utility function to find the vertex with minimum distance value, from
 // the set of vertices not yet included in shortest path tree
-int Connectome::minDistance(std::vector<float> dist, std::vector<bool> sptSet)
+int Connectome::minDistance(int nbNodes, std::vector<float> dist, std::vector<bool> sptSet)
 {
    // Initialize min value
    float min = std::numeric_limits<float>::infinity();
    int min_index;
   
-   for (int v = 0; v < m_NbLabels; v++)
+   for (int v = 0; v < nbNodes; v++)
      if (sptSet[v] == false && dist[v] <= min)
          min = dist[v], min_index = v;
   
    return min_index;
 }
 
-void Connectome::dijkstra(int src)
+void Connectome::dijkstra(int src, int nbNodes, vector<vector<float> > graph, vector<float>& min_dist)
 { 
-    std::vector<bool> sptSet(m_NbLabels); // sptSet[i] will true if vertex i is included in shortest // path tree or shortest distance from src to i is finalized
+    std::vector<bool> sptSet(nbNodes); // sptSet[i] will true if vertex i is included in shortest // path tree or shortest distance from src to i is finalized
   
     // Initialize all distances as INFINITE and stpSet[] as false
-    for (int i = 0; i < m_NbLabels; i++)
+    for (int i = 0; i < nbNodes; i++)
     {
-        Nodes[src].min_dist[i] = std::numeric_limits<float>::infinity(), sptSet[i] = false;
+        min_dist[i] = std::numeric_limits<float>::infinity(), sptSet[i] = false;
     }
   
     // Distance of source vertex from itself is always 0
-    Nodes[src].min_dist[src] = 0;
+    min_dist[src] = 0;
   
     // Find shortest path for all vertices
-    for (int count = 0; count < m_NbLabels-1; count++)
+    for (int count = 0; count < nbNodes-1; count++)
     {
         // Pick the minimum distance vertex from the set of vertices not
         // yet processed. u is always equal to src in first iteration.
-        int u = minDistance(Nodes[src].min_dist, sptSet);
+        int u = minDistance(nbNodes, min_dist, sptSet);
   
         // Mark the picked vertex as processed
         sptSet[u] = true;
   
         // Update dist value of the adjacent vertices of the picked vertex.
-        for (int v = 0; v < m_NbLabels; v++)
+        for (int v = 0; v < nbNodes; v++)
         {
             // Update dist[v] only if is not in sptSet, there is an edge from 
             // u to v, and total weight of path from src to  v through u is 
             // smaller than current value of dist[v]
-            if (!sptSet[v] && Edges[u][v] > m_Edgethreshold && Nodes[src].min_dist[u] != std::numeric_limits<float>::infinity() && Nodes[src].min_dist[u]+(1/Edges[u][v]) < Nodes[src].min_dist[v])
+            if (!sptSet[v] && graph[u][v] > m_Edgethreshold && min_dist[u] != std::numeric_limits<float>::infinity() && min_dist[u]+(1-graph[u][v]) < min_dist[v])
             {
-                Nodes[src].min_dist[v] = Nodes[src].min_dist[u] + (1/Edges[u][v]);
+                min_dist[v] = min_dist[u] + (1-graph[u][v]);
             }
         }
     }
   
-    //set closeness
-    float sum = 0.0f;
-    for(int i=0; i< m_NbLabels; i++)
-    {
-        if(i!=src && Edges[src][i] > m_Edgethreshold)
-            sum += 1/Nodes[src].min_dist[i];
-    }
-    Nodes[src].closeness_centrality = sum/float(m_nbNodesActive-1);
-
      // print the constructed distance array
     //printf("Vertex   Distance from Source\n");
     //for (int i = 0; i < m_NbLabels; i++)
@@ -565,7 +646,10 @@ void Connectome::displayPickedNodeMetrics(hitResult hr)
 
         if(ConnectomeHelper::getInstance()->isEdgesReady())
         {
-            dijkstra(id);
+            //Closeness
+            dijkstra(id, m_NbLabels, Edges, Nodes[id].min_dist);
+            Nodes[id].closeness_centrality = closenessCentrality(id);
+            Nodes[id].local_efficiency = localEfficiency(id);
         }
 
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(0,0,Nodes[id].name);
@@ -574,6 +658,7 @@ void Connectome::displayPickedNodeMetrics(hitResult hr)
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(3,0,wxString::Format( wxT( "%.3f" ), Nodes[id].strength));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(4,0,wxString::Format( wxT( "%.3f" ), Nodes[id].eigen_centrality));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(5,0,wxString::Format( wxT( "%.3f" ), Nodes[id].closeness_centrality));
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(7,0,wxString::Format( wxT( "%.3f" ), Nodes[id].local_efficiency));
     }
     else
     {
@@ -587,6 +672,7 @@ void Connectome::displayPickedNodeMetrics(hitResult hr)
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(3,0,wxString::Format( wxT( "" ), wxT( "" )));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(4,0,wxString::Format( wxT( "" ), wxT( "" )));
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(5,0,wxString::Format( wxT( "" ), wxT( "" )));
+        ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(7,0,wxString::Format( wxT( "" ), wxT( "" )));
     }
 
     if(ConnectomeHelper::getInstance()->isEdgesReady())
@@ -613,7 +699,7 @@ void Connectome::renderEdges()
 			    if(v < 0.33f)
 			    {
                     R = 0.0f;
-                    G = (v/0.25f);
+                    G = (v/0.33f);
                     B = 1.0f;
                     edgeSize = 0;
                     alphaValue = 0.1f;
@@ -693,7 +779,8 @@ void Connectome::computeGlobalMetrics()
     for (unsigned int i=0; i<Edges.size(); i++)
     {
         //Dijsktra
-        dijkstra(i);
+        dijkstra(i, m_NbLabels, Edges, Nodes[i].min_dist);
+        Nodes[i].closeness_centrality = closenessCentrality(i);
         //basic metrics
         float sumEdge = 0.0f;
         for(unsigned int j=0; j<Edges[i].size();j++)
@@ -715,7 +802,7 @@ void Connectome::computeGlobalMetrics()
     {
         for (size_t j =0; j< Nodes[i].min_dist.size(); j++)
         {
-            if(Edges[i][j] > m_Edgethreshold && j!=i)
+            if(Edges[i][j] > m_Edgethreshold && j!=i && Nodes[i].min_dist[j] !=0)
                 sum+= 1/Nodes[i].min_dist[j];
         }
     }

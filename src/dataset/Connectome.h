@@ -38,7 +38,8 @@ struct Node
     picked(false),
     degree(0),
     strength(0.0f),
-    eigen_centrality(0.0f)
+    eigen_centrality(0.0f),
+    local_efficiency(0.0f)
 {
 }
     Vector center;
@@ -52,6 +53,7 @@ struct Node
     float eigen_centrality;
     float closeness_centrality;
     float betweenness_centrality;
+    float local_efficiency;
     std::vector<float> min_dist;
 };
 
@@ -94,8 +96,10 @@ public:
     void clearConnectome();
     GlobalGraphMetrics getGlobalStats() {return m_Globalstats;}
 
-    void dijkstra(int src);
-    int minDistance(std::vector<float> dist, std::vector<bool> sptSet);
+    void dijkstra(int src, int nbNodes, vector<vector<float> > graph, vector<float>& min_dist);
+    int minDistance(int nbNodes, std::vector<float> dist, std::vector<bool> sptSet);
+    float closenessCentrality(int nodeID);
+    float localEfficiency(int id);
 
 
 protected:
