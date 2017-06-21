@@ -47,6 +47,7 @@ public:
 	void onConvertRestingState				   ( wxCommandEvent& event );
     void onGenerateClusters				       ( wxCommandEvent& event );
 	void onInitiateTractography                ( wxCommandEvent& event );
+    void onLoadAsRestingState                ( wxCommandEvent& event );
 	
 	
 	

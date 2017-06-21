@@ -523,6 +523,38 @@ void MainFrame::onLoadLabels( wxCommandEvent& WXUNUSED(event) )
     refreshAllGLWidgets();
 }
 
+void MainFrame::onLoadMatrix( wxCommandEvent& WXUNUSED(event) )
+{
+    wxArrayString fileNames;
+    wxString caption          = wxT( "Choose connectivity matrix" );
+    wxString wildcard         = wxT( "*.*|*.*|Text File (*.txt)|*.txt*" );
+    wxString defaultDir       = wxEmptyString;
+    wxString defaultFileName  = wxEmptyString;
+    wxFileDialog dialog( this, caption, defaultDir, defaultFileName, wildcard, wxFD_OPEN | wxFD_MULTIPLE );
+    dialog.SetFilterIndex( 0 );
+    dialog.SetDirectory( m_lastPath );
+    if( dialog.ShowModal() == wxID_OK )
+    {
+        m_lastPath = dialog.GetDirectory();
+        dialog.GetPaths( fileNames );
+    }
+
+    unsigned int nbErrors = for_each( fileNames.begin(), fileNames.end(), Loader( this, m_pListCtrl, false, false, true ) ).getNbErrors();
+
+    if ( nbErrors )
+    {
+        wxString errorMsg = wxString::Format( ( nbErrors > 1 ? wxT( "Last error: %s\nFor a complete list of errors, please review the log" ) : wxT( "%s" ) ), Logger::getInstance()->getLastError().c_str() );
+
+        wxMessageBox( errorMsg, wxT( "Error while loading" ), wxOK | wxICON_ERROR, NULL );
+        GetStatusBar()->SetStatusText( wxT( "ERROR" ), 1 );
+        GetStatusBar()->SetStatusText( Logger::getInstance()->getLastError(), 2 );
+        return;
+    }
+
+    //ConnectomeHelper::getInstance()->setLabelNamesLoaded(true);
+    refreshAllGLWidgets();
+}
+
 //
 //This function creates an Anatomy from scratch
 //

@@ -38,6 +38,8 @@ public:
 public:
 	void onSelectLabels                ( wxCommandEvent& event );
     void onSelectEdges                 ( wxCommandEvent& event );
+    void onLoadMatrix                  ( wxCommandEvent& event );
+    void onLoadLabels                  ( wxCommandEvent& event );
     void OnNbLabels                    ( wxCommandEvent& event );
     void OnSliderDisplayMoved          ( wxCommandEvent& event );
     void OnToggleFlashyEdges           ( wxCommandEvent& event );
@@ -54,6 +56,7 @@ private:
     MainFrame           *m_pMainFrame;
 	wxButton            *m_pBtnSelectLabels;
     wxButton            *m_pBtnLoadLabels;
+    wxButton            *m_pBtnLoadMatrix;
     wxButton            *m_pBtnSelectEdges;
     wxTextCtrl          *m_pNbLabels;
     wxTextCtrl          *m_pTxtBoxNbLabels;

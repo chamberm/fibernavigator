@@ -33,6 +33,7 @@
 //////////////////////////////////////////
 Connectome::Connectome():
 m_labels(NULL),
+m_fibers(NULL),
 m_NbLabels(161),
 m_nodeAlpha(1.0f),
 m_nodeSize(2),
@@ -72,6 +73,7 @@ Connectome::~Connectome()
 void Connectome::clearConnectome()
 {
     Edges.clear();
+    normEdges.clear();
     m_labelHist.clear();
     Nodes.clear();
     m_fiberMatrix.clear();
@@ -159,6 +161,56 @@ void Connectome::setLabels(Anatomy *labels)
     ConnectomeHelper::getInstance()->setLabelsReady(true);
 }
 
+void Connectome::setMatrix(vector<vector<float> > M)
+{
+    Edges = M;
+    normEdges = M;
+
+    //Normalize
+    for (unsigned int i=0; i<Edges.size();i++)
+    {
+        for (unsigned int j=0; j<Edges[i].size(); j++)
+        {
+            if(Edges[i][j] >0 && i!=j)
+            {
+                float tmpMax = Edges[i][j];
+                float tmpMin = Edges[i][j];
+                if(tmpMax > m_Edgemax)
+                {
+                    m_Edgemax = tmpMax;
+                }
+                if(tmpMin < m_Edgemin)
+                {
+                    m_Edgemin = tmpMin;
+                }
+            }
+        }
+    }
+
+    for (unsigned int i=0; i<Edges.size();i++)
+    {
+        //normalize edge for visualization
+        for (unsigned int j=0; j<Edges[i].size(); j++)
+        {
+            if(Edges[i][j] >0 && i!=j)
+            {
+                normEdges[i][j] = (Edges[i][j] - m_Edgemin)/(m_Edgemax-m_Edgemin);
+            }
+            else
+            {
+                normEdges[i][j] =0;
+            }
+        }   
+    }
+
+    
+    std::cout << "Edge min.: " << m_Edgemin << " " << "Edge max.: " << m_Edgemax << std::endl;
+    
+    computeNodeDegreeAndStrength();
+    computeGlobalMetrics();
+    ConnectomeHelper::getInstance()->setEdgesReady(true);
+}
+
 void Connectome::setEdges(Fibers *edges)
 {
     m_fibers = edges;
@@ -176,6 +228,7 @@ void Connectome::setEdges(Fibers *edges)
             Edges[i][j] = 0.0f;
         }
     }
+    normEdges = Edges;
     
     for( int i = 0; i < nbFibers; ++i )
     {        
@@ -237,7 +290,7 @@ void Connectome::setEdges(Fibers *edges)
         {
             if(Edges[i][j] !=0 && i!=j)
             {
-                Edges[i][j] = (Edges[i][j] - m_Edgemin)/(m_Edgemax-m_Edgemin);
+                normEdges[i][j] = (Edges[i][j] - m_Edgemin)/(m_Edgemax-m_Edgemin);
             }
         }   
     }
@@ -268,11 +321,11 @@ void Connectome::computeNodeDegreeAndStrength()
         Nodes[i].strength = 0;
         for (unsigned int j=0; j<Edges[i].size(); j++)
         {
-            if(Edges[i][j] > m_Edgethreshold && i!=j)
+            if(normEdges[i][j] > m_Edgethreshold && i!=j)
             {
                 Nodes[i].degree++; //Node degree 
                 Nodes[i].strength+=Edges[i][j]; //Node strength
-                T(i,j) = Edges[i][j];
+                T(i,j) = normEdges[i][j];
             }
         }
 
@@ -322,7 +375,7 @@ void Connectome::computeNodeDegreeAndStrength()
         if(Nodes[i].picked)
         {
             //closeness
-            dijkstra(i, m_NbLabels, Edges, Nodes[i].min_dist);
+            dijkstra(i, m_NbLabels, normEdges, Nodes[i].min_dist);
             Nodes[i].closeness_centrality = closenessCentrality(i);
 
             if(Nodes[i].picked)
@@ -361,7 +414,7 @@ float Connectome::localEfficiency(int id)
     vector<int> neighborsID;
     for(size_t s=0; s < Edges[id].size(); s++)
     {
-        if(Edges[id][s] > m_Edgethreshold && id!=s)
+        if(normEdges[id][s] > m_Edgethreshold && id!=s)
         {
             neighborsID.push_back(s);
         }
@@ -376,9 +429,9 @@ float Connectome::localEfficiency(int id)
     {
         for(size_t t = 0; t< subGraph.size(); t++)
         {
-            if(s!=t && Edges[neighborsID[s]][neighborsID[t]] > m_Edgethreshold)
+            if(s!=t && normEdges[neighborsID[s]][neighborsID[t]] > m_Edgethreshold)
             {
-                subGraph[s][t] = Edges[neighborsID[s]][neighborsID[t]];
+                subGraph[s][t] = normEdges[neighborsID[s]][neighborsID[t]];
             }
         }
     }
@@ -402,7 +455,7 @@ float Connectome::localEfficiency(int id)
                 if(i!=j)
                 {
                     if(minDistMatrix[i][j]!=0)
-                        sum += 1/minDistMatrix[i][j];
+                        sum += 1.0f/minDistMatrix[i][j];
                     else
                         sum+=1;
                 }
@@ -427,7 +480,7 @@ float Connectome::closenessCentrality(int nodeID)
     for(int i=0; i< m_NbLabels; i++)
     {
         if(i!=nodeID && Nodes[nodeID].min_dist[i]!=0)
-            sum += 1/Nodes[nodeID].min_dist[i];
+            sum += 1.0f/Nodes[nodeID].min_dist[i];
     }
     return sum/float(m_nbNodesActive-1);
 }
@@ -647,7 +700,7 @@ void Connectome::displayPickedNodeMetrics(hitResult hr)
         if(ConnectomeHelper::getInstance()->isEdgesReady())
         {
             //Closeness
-            dijkstra(id, m_NbLabels, Edges, Nodes[id].min_dist);
+            dijkstra(id, m_NbLabels, normEdges, Nodes[id].min_dist);
             Nodes[id].closeness_centrality = closenessCentrality(id);
             Nodes[id].local_efficiency = localEfficiency(id);
         }
@@ -675,7 +728,7 @@ void Connectome::displayPickedNodeMetrics(hitResult hr)
         ConnectomeHelper::getInstance()->m_pGridNodeInfo->SetCellValue(7,0,wxString::Format( wxT( "" ), wxT( "" )));
     }
 
-    if(ConnectomeHelper::getInstance()->isEdgesReady())
+    if(ConnectomeHelper::getInstance()->isEdgesReady() && m_fibers!=NULL)
     {
         setSelectedStreamlines();  
     }
@@ -690,11 +743,11 @@ void Connectome::renderEdges()
         glDepthMask(GL_TRUE);
         for(unsigned int j=i+1; j<Edges[i].size();j++)
         {
-            if(Edges[i][j] > m_Edgethreshold)
+            if(normEdges[i][j] > m_Edgethreshold)
             {
                 float alphaValue = m_edgeAlpha;
 			    float R,G,B;
-                float v = Edges[i][j];
+                float v = normEdges[i][j];
                 float edgeSize;
 			    if(v < 0.33f)
 			    {
@@ -702,7 +755,7 @@ void Connectome::renderEdges()
                     G = (v/0.33f);
                     B = 1.0f;
                     edgeSize = 0;
-                    alphaValue = 0.1f;
+                    alphaValue = v;
 			    }
                 else if(v >= 0.33f && v <= 0.66f)
                 {
@@ -710,7 +763,7 @@ void Connectome::renderEdges()
 				    G = 1.0f - ((v-0.33f)/(0.66f-0.33f));
 				    B = 1.0f;
                     edgeSize = 1;
-                    alphaValue = 0.8f;
+                    alphaValue = v;
 			    }
                 else
                 {
@@ -718,7 +771,7 @@ void Connectome::renderEdges()
 				    G = 0.0f;
 				    B = 1.0f-((v-0.66f)/(1.0f-0.66f));
                     edgeSize = 2;
-                    alphaValue = 0.9f;
+                    alphaValue = v;
                 }
                 
                 //Local vector
@@ -779,13 +832,13 @@ void Connectome::computeGlobalMetrics()
     for (unsigned int i=0; i<Edges.size(); i++)
     {
         //Dijsktra
-        dijkstra(i, m_NbLabels, Edges, Nodes[i].min_dist);
+        dijkstra(i, m_NbLabels, normEdges, Nodes[i].min_dist);
         Nodes[i].closeness_centrality = closenessCentrality(i);
         //basic metrics
         float sumEdge = 0.0f;
         for(unsigned int j=0; j<Edges[i].size();j++)
         {
-            if(Edges[i][j] > m_Edgethreshold && j!=i)
+            if(normEdges[i][j] > m_Edgethreshold && j!=i)
             {
                 sumEdge++;
             }
@@ -802,8 +855,11 @@ void Connectome::computeGlobalMetrics()
     {
         for (size_t j =0; j< Nodes[i].min_dist.size(); j++)
         {
-            if(Edges[i][j] > m_Edgethreshold && j!=i && Nodes[i].min_dist[j] !=0)
-                sum+= 1/Nodes[i].min_dist[j];
+            if(normEdges[i][j] > 0.6 && j!=i && Nodes[i].min_dist[j] !=0)
+            {
+                sum+= 1.0f/Nodes[i].min_dist[j];
+                std::cout << Nodes[i].min_dist[j] << " ";
+            }
         }
     }
 

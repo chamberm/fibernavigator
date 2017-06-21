@@ -24,6 +24,9 @@ public:
     void setShowStreamlines(bool selected) { m_isShowStreamlines = selected;}
     void toggleShowStreamlines() {m_isShowStreamlines = !m_isShowStreamlines;}
     void setLabelNamesLoaded( bool loaded) { m_isLabelNamesLoaded = loaded;}
+
+    
+
     
     bool isDirty() const     { return m_isDirty; }
     void setDirty( bool dirty )          { m_isDirty = dirty; }
@@ -53,6 +56,7 @@ private:
     bool m_isDirty;
     bool m_isShowStreamlines;
     bool m_isLabelNamesLoaded;
+
 
     
 

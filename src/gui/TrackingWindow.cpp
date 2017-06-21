@@ -712,8 +712,9 @@ void TrackingWindow::OnMapSeeding( wxCommandEvent& WXUNUSED(event) )
     }
 }
 
-void TrackingWindow::OnToggleGM( wxCommandEvent& WXUNUSED(event) )
+void TrackingWindow::OnToggleGM( wxCommandEvent& event )
 {
+    m_pMainFrame->onLoadLabels(event);
     RTTrackingHelper::getInstance()->toggleGMmap();
     RTTrackingHelper::getInstance()->setRTTDirty( true );
     

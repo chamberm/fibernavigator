@@ -45,8 +45,10 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
     m_pBtnSelectLabels->SetBackgroundColour(wxColour( 255, 147, 147 ));
 
     m_pBtnLoadLabels = new wxButton( this, wxID_ANY,wxT("Load labels (.txt)"), wxDefaultPosition, wxSize(230, -1) );
-	pMf->Connect( m_pBtnLoadLabels->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MainFrame::onLoadLabels) );
-
+	Connect( m_pBtnLoadLabels->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::onLoadLabels) );
+    
+    m_pBtnLoadMatrix = new wxButton( this, wxID_ANY,wxT("Load Matrix (.txt)"), wxDefaultPosition, wxSize(230, -1) );
+	Connect( m_pBtnLoadMatrix->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::onLoadMatrix) );
 
     m_pBtnSelectEdges = new wxButton( this, wxID_ANY,wxT("Edges not selected"), wxDefaultPosition, wxSize(230, -1) );
 	Connect( m_pBtnSelectEdges->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ConnectomicWindow::onSelectEdges) );
@@ -58,6 +60,7 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
 	wxBoxSizer *pBoxRow1 = new wxBoxSizer( wxVERTICAL );
 	pBoxRow1->Add( m_pBtnSelectLabels, 0, wxALIGN_CENTER | wxALL, 1 );
     pBoxRow1->Add( m_pBtnLoadLabels, 0, wxALIGN_CENTER | wxALL, 1 );
+    pBoxRow1->Add( m_pBtnLoadMatrix, 0, wxALIGN_CENTER | wxALL, 1 );
     pBoxRow1->Add( m_pBtnSelectEdges, 0, wxALIGN_CENTER | wxALL, 1 );
     pBoxRow1->Add( m_pBtnClearConnectome, 0, wxALIGN_CENTER | wxALL, 1 );
     //pBoxRow1->Add( new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxSize(230,-1),wxHORIZONTAL,wxT("Separator")), 0, wxALIGN_RIGHT | wxALL, 1 );
@@ -66,7 +69,7 @@ ConnectomicWindow::ConnectomicWindow( wxWindow *pParent, MainFrame *pMf, wxWindo
     m_pConnectomicSizer->AddSpacer( 8 );
 
     m_pTextEdgeThreshold = new wxStaticText( this, wxID_ANY, wxT("Threshold"), wxDefaultPosition, wxSize(70, -1), wxALIGN_CENTER );
-	m_pSliderEdgeThreshold= new MySlider( this, wxID_ANY, 0, 0, 200, wxDefaultPosition, wxSize(100, -1), wxSL_HORIZONTAL | wxSL_AUTOTICKS );
+	m_pSliderEdgeThreshold= new MySlider( this, wxID_ANY, 0, 0, 300, wxDefaultPosition, wxSize(100, -1), wxSL_HORIZONTAL | wxSL_AUTOTICKS );
 	m_pSliderEdgeThreshold->SetValue( 0 );
 	Connect( m_pSliderEdgeThreshold->GetId(), wxEVT_COMMAND_SLIDER_UPDATED, wxCommandEventHandler(ConnectomicWindow::onSliderEdgeThreshold) );
     m_pTxtEdgeThresholdBox = new wxTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxSize(55, -1), wxTE_CENTRE | wxTE_READONLY );
@@ -252,8 +255,39 @@ void ConnectomicWindow::onSelectLabels( wxCommandEvent& event )
 		m_pBtnSelectLabels->SetLabel( pMap->getName() );
         m_pBtnSelectLabels->SetBackgroundColour(wxNullColour);
         ConnectomeHelper::getInstance()->getConnectome()->setLabels( (Anatomy *)DatasetManager::getInstance()->getDataset( m_pMainFrame->m_pListCtrl->GetItem( item ) ) );
-        ConnectomeHelper::getInstance()->setLabelsSelected(true);
+        ConnectomeHelper::getInstance()->setLabelsSelected(true);   
 	}
+
+}
+
+void ConnectomicWindow::onLoadMatrix( wxCommandEvent& event)
+{
+    m_pMainFrame->onLoadMatrix(event);
+
+    m_pGridGlobalInfo->SetCellValue( 1,  0, wxString::Format( wxT( "%i" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_NbEdges        ) );
+    m_pGridGlobalInfo->SetCellValue( 2,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_Density       ) );
+    m_pGridGlobalInfo->SetCellValue( 3,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_meanDegree       ) );
+    m_pGridGlobalInfo->SetCellValue( 4,  0, wxString::Format( wxT( "%.2f" ), ConnectomeHelper::getInstance()->getConnectome()->getGlobalStats().m_globalEfficiency       ) );
+
+    m_pBtnSelectEdges->SetBackgroundColour(wxNullColour);
+    ConnectomeHelper::getInstance()->setEdgesSelected(true);
+    //const wxString fname = ;
+    m_pBtnSelectEdges->SetLabel( wxT("Edges selected from .txt file") );
+    m_pBtnLoadMatrix->SetLabel( wxT("Connectivity matrix loaded") );
+    
+    m_pBtnSelectEdges->Enable(false);
+    m_pToggleShowFibers->Enable(false);
+
+    //for function networks
+    m_pSliderEdgeThreshold->SetMax(1000*ConnectomeHelper::getInstance()->getConnectome()->getMaxEdgeValue());
+}
+
+void ConnectomicWindow::onLoadLabels( wxCommandEvent& event )
+{
+    m_pMainFrame->onLoadLabels(event);
+    
+    wxString fname = wxT("Label list loaded");
+    m_pBtnLoadLabels->SetLabel( fname );
 
 }
 
@@ -269,6 +303,7 @@ void ConnectomicWindow::onSelectEdges( wxCommandEvent& event )
 
         std::vector<bool> selected(fibers->getFibersCount(), false);
         fibers->setSelected(selected);
+        m_pBtnLoadMatrix->Enable(false);
 
         ConnectomeHelper::getInstance()->getConnectome()->setEdges( fibers );
 
@@ -290,6 +325,10 @@ void ConnectomicWindow::onClearConnectome( wxCommandEvent& event )
     
     m_pBtnSelectEdges->SetLabel( wxT( "Edges not selected") );
     m_pBtnSelectEdges->SetBackgroundColour(wxColour(255, 147, 147));
+    m_pBtnSelectEdges->Enable(true);
+
+    m_pBtnLoadLabels->SetLabel( wxT("Load labels (.txt)"));
+    m_pBtnLoadMatrix->SetLabel( wxT("Load matrix (.txt)"));
 
     m_pGridGlobalInfo->SetCellValue( 0,  0, wxT( "" ) );
     m_pGridGlobalInfo->SetCellValue( 1,  0, wxT( "" ) );
@@ -341,6 +380,12 @@ void ConnectomicWindow::onSliderEdgeThreshold( wxCommandEvent& event )
 {
     float sliderValue = m_pSliderEdgeThreshold->GetValue() / 1000.0f;
 	m_pTxtEdgeThresholdBox->SetValue( wxString::Format( wxT( "%.3f"), sliderValue ) );
+    if(!m_pBtnSelectEdges->IsEnabled())
+    {
+        float max = ConnectomeHelper::getInstance()->getConnectome()->getMaxEdgeValue();
+        float min = ConnectomeHelper::getInstance()->getConnectome()->getMinEdgeValue();
+        sliderValue = (sliderValue - min)/(max - min);
+    }
 	ConnectomeHelper::getInstance()->getConnectome()->setEdgeThreshold( sliderValue );
 
     if(ConnectomeHelper::getInstance()->isEdgesReady())

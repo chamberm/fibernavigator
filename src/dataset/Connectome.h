@@ -67,6 +67,7 @@ public:
 
 	void setLabels( Anatomy* labels );
     void setEdges( Fibers* edges );
+    void setMatrix( std::vector<std::vector<float> > M);
     void setNbLabels( double nbLabels ) {m_NbLabels = int(nbLabels); }
     void setNodeAlpha( float value ) {m_nodeAlpha = value;}
     void setNodeSize( float value ) {m_nodeSize = value;}
@@ -78,6 +79,9 @@ public:
     bool isFlashyEdges() const { return m_isFlashyEdges; }
     bool toggleOrientationDep()           { return m_isOrientationDep = !m_isOrientationDep; }
     bool isOrientationDep() const { return m_isOrientationDep; }
+    int getNbLabels() {return m_NbLabels;}
+    float getMaxEdgeValue() {return m_Edgemax;}
+    float getMinEdgeValue() {return m_Edgemin;}
 
     void renderGraph();
     void renderNodes();
@@ -101,6 +105,12 @@ public:
     float closenessCentrality(int nodeID);
     float localEfficiency(int id);
 
+    wxString getMatrixFilename() const {return m_matrixFilename;}
+    wxString getLabelFilename() const {return m_labelFilename;}
+
+    void setLabelFilename(wxString fname) {m_labelFilename = fname;}
+    void setMatrixFilename(wxString fname) {m_matrixFilename = fname;}
+
 
 protected:
     GlobalGraphMetrics        m_Globalstats;
@@ -123,8 +133,8 @@ private:
     float m_edgeAlpha;
     bool m_isFlashyEdges;
     bool m_isOrientationDep;
-    int m_Edgemax;
-    int m_Edgemin;
+    float m_Edgemax;
+    float m_Edgemin;
     int m_NodeDegreeMax;
     float m_Edgethreshold;
     Vector m_savedNodeColor;
@@ -138,8 +148,10 @@ private:
     std::vector<bool> m_selectedFibers;
     std::vector<Node> Nodes;
     std::vector<std::vector<float> > Edges;
+    std::vector<std::vector<float> > normEdges;
 
-    //metrics
+    wxString m_labelFilename;
+    wxString m_matrixFilename;
 
 };
 

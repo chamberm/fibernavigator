@@ -36,7 +36,7 @@ FMRIWindow::FMRIWindow( wxWindow *pParent, MainFrame *pMf, wxWindowID id, const 
     SetAutoLayout( true );
 
     m_pBtnSelectFMRI = new wxButton( this, wxID_ANY,wxT("Load resting-state"), wxDefaultPosition, wxSize(230, -1) );
-	pMf->Connect( m_pBtnSelectFMRI->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MainFrame::onLoadAsRestingState) );
+	Connect( m_pBtnSelectFMRI->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(FMRIWindow::onLoadAsRestingState) );
     m_pBtnSelectFMRI->SetBackgroundColour(wxColour( 255, 147, 147 ));
 
 	m_pBtnStart = new wxToggleButton( this, wxID_ANY,wxT("Start correlation"), wxDefaultPosition, wxSize(230, 50) );
@@ -153,6 +153,11 @@ void FMRIWindow::OnPaint( wxPaintEvent &WXUNUSED(event) )
 wxSizer* FMRIWindow::getWindowSizer()
 {
     return m_pFMRISizer;
+}
+
+void FMRIWindow::onLoadAsRestingState(wxCommandEvent& event)
+{
+    m_pMainFrame->onLoadAsRestingState(event);
 }
 
 void FMRIWindow::SetSelectButton()

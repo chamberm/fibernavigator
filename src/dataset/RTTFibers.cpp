@@ -234,6 +234,7 @@ void RTTFibers::seed()
                         {
 						    //Track both sides
 						    performDTIRTT( Vector(x,y,z),  1, pointsF, colorF); //First pass
+                            draw = m_render && m_and;
 						    performDTIRTT( Vector(x,y,z), -1, pointsB, colorB); //Second pass
                         }
                         
@@ -1173,9 +1174,10 @@ void RTTFibers::performDTIRTT(Vector seed, int bwdfwd, vector<float>& points, ve
                 points.push_back( currPosition.x );
                 points.push_back( currPosition.y );
                 points.push_back( currPosition.z );
-                color.push_back( currDirection.x );
-                color.push_back( currDirection.y );
-                color.push_back( currDirection.z );
+                color.push_back( std::abs(currDirection.x) );
+                color.push_back( std::abs(currDirection.y) );
+                color.push_back( std::abs(currDirection.z) );
+                color.push_back( m_alpha );
 
                 //Advance
                 currPosition = nextPosition;

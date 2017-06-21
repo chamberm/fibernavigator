@@ -807,6 +807,7 @@ void TheScene::lightsOn()
     Vector3fMultMat4( &l, &v1, &transform );
 
     GLfloat lightPosition0[] = { l.s.X, l.s.Y, l.s.Z, 0.0 };
+    //drawSphere(l.s.X,l.s.Y,l.s.Z,10);
 
     glLightfv( GL_LIGHT0, GL_AMBIENT,  ambientLight   );
     glLightfv( GL_LIGHT0, GL_DIFFUSE,  diffuseLight   );

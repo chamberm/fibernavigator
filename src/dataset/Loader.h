@@ -28,13 +28,15 @@ private:
     // anats looking as r4 ODFs as a file with 5 peaks per voxel instead.
     bool m_loadAsPeaks;
     bool m_loadAsRestingState;
+    bool m_loadAsMatrixTxt;
 public:
-    Loader( MainFrame *pMainFrame, ListCtrl *pListCtrl, const bool loadAsPeaks = false, const bool loadAsRestingState = false )
+    Loader( MainFrame *pMainFrame, ListCtrl *pListCtrl, const bool loadAsPeaks = false, const bool loadAsRestingState = false, const bool loadAsMatrixTxt = false )
     :   m_pMainFrame( pMainFrame ),
         m_pListCtrl( pListCtrl ),
         m_error( 0 ),
         m_loadAsPeaks( loadAsPeaks ),
-        m_loadAsRestingState( loadAsRestingState )
+        m_loadAsRestingState( loadAsRestingState ),
+        m_loadAsMatrixTxt ( loadAsMatrixTxt )
     {
     }
 
@@ -63,21 +65,52 @@ public:
 
             if(wxT( "txt" ) == extension )
             {
-                std::cout << "Reading .txt file" << std::endl;
-                
-                std::ifstream file;
-                file.open(filename.ToStdString());
-                if (!file.is_open()) return;
-
-                string word;
-                vector<wxString> labels;
-                while (file >> word)
+                if(m_loadAsMatrixTxt)
                 {
-                    file >> word;
-                    labels.push_back(wxString(word));
-                }
-                ConnectomeHelper::getInstance()->getConnectome()->setLabelNames(labels);
+                    std::cout << "Reading MATRIX txt file" << std::endl;
+                
+                    wxString n = name;
+                    ConnectomeHelper::getInstance()->getConnectome()->setMatrixFilename(n);
+                    std::ifstream file;
+                    file.open(filename.ToStdString());
+                    if (!file.is_open()) return;
 
+
+                    int matrix_size = ConnectomeHelper::getInstance()->getConnectome()->getNbLabels();
+
+                    vector<vector<float>> M(matrix_size,vector<float>(matrix_size));
+
+                    while (!file.eof()) {
+
+                        for(int i=0; i < matrix_size; i++){
+                            for (int j=0; j<matrix_size; j++){
+                                file  >> M[i][j];
+                            }
+                        }
+
+                    }
+                    ConnectomeHelper::getInstance()->getConnectome()->setMatrix(M);
+
+                }
+                else
+                {
+                    std::cout << "Reading LABELS txt file" << std::endl;
+                    wxString n = name;
+                    ConnectomeHelper::getInstance()->getConnectome()->setLabelFilename(n);
+
+                    std::ifstream file;
+                    file.open(filename.ToStdString());
+                    if (!file.is_open()) return;
+
+                    string word;
+                    vector<wxString> labels;
+                    while (file >> word)
+                    {
+                        file >> word;
+                        labels.push_back(wxString(word));
+                    }
+                    ConnectomeHelper::getInstance()->getConnectome()->setLabelNames(labels);
+                }
             }
             else
             {
