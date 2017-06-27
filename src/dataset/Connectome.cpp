@@ -855,10 +855,10 @@ void Connectome::computeGlobalMetrics()
     {
         for (size_t j =0; j< Nodes[i].min_dist.size(); j++)
         {
-            if(normEdges[i][j] > 0.6 && j!=i && Nodes[i].min_dist[j] !=0)
+            if(normEdges[i][j] > m_Edgethreshold && j!=i && Nodes[i].min_dist[j] !=0)
             {
                 sum+= 1.0f/Nodes[i].min_dist[j];
-                std::cout << Nodes[i].min_dist[j] << " ";
+                //std::cout << Nodes[i].min_dist[j] << " ";
             }
         }
     }
