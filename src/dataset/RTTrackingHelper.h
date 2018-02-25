@@ -33,6 +33,7 @@ public:
     bool isAndMapOn() const {return m_isAndMapOn;}
     bool isSrcAlpha() const { return m_isSrcAlpha; }
     bool isRandomInit() const { return m_isRandomInit; }
+	bool isDet() const { return m_isDeterministic; }
 
     void setFileSelected( bool selected )     { m_isFileSelected = selected; }
     void setShellSeeds( bool shell )          { m_isShellSeeds = shell; }
@@ -54,6 +55,7 @@ public:
     bool toggleRandomInit()         { return m_isRandomInit = !m_isRandomInit; }
     bool toggleNotMap()             { return m_isNotMapOn = !m_isNotMapOn;}
     bool toggleAndMap()             { return m_isAndMapOn = !m_isAndMapOn;}
+	bool toggleDetProb()			{ return m_isDeterministic = !m_isDeterministic;}
     
     bool togglePlayStop()             { return m_isPaused = !m_isPaused; }
     bool isTrackActionPlaying() const { return m_isTrackActionPlaying; }
@@ -108,6 +110,7 @@ private:
 	int m_id;
     bool m_isSrcAlpha;
     bool m_isRandomInit;
+	bool m_isDeterministic;
     Vector flippedAxes;
     GLuint m_bufferID;
 

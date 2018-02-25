@@ -366,10 +366,14 @@ DatasetIndex DatasetManager::load( const wxString &filename, const wxString &ext
                 result = loadRestingState( filename, pHeader, pBody );
             }
         }
-        else
+        else if(pHeader->dim[4] > 4)
         {
-            result = loadAnatomy( filename, pHeader, pBody );
+            Logger::getInstance()->print( wxT( "Cannot open a series of DWI" ), LOGLEVEL_ERROR );
         }
+		else
+		{
+			result = loadAnatomy( filename, pHeader, pBody );
+		}
 
         nifti_image_free( pHeader );
         nifti_image_free( pBody );

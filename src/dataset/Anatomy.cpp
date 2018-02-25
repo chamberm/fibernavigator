@@ -1906,6 +1906,7 @@ void Anatomy::equalizeHistogram()
             else
             {
                 Logger::getInstance()->print( wxT( "Anatomy::equalizeHistogram() pixel value out of range" ), LOGLEVEL_ERROR );
+				++pixelCount[255]; //clamp for now
             }
         }
 
@@ -1966,7 +1967,8 @@ void Anatomy::equalizeHistogram()
     // Calculate the equalized frame
     for( unsigned int i( 0 ); i < size; ++i )
     {
-        m_equalizedDataset[i] = equalizedHistogram[static_cast< unsigned int >( m_floatDataset.at( i ) * ( GRAY_SCALE - 1 ) )];
+		float value = m_floatDataset.at( i ) * ( GRAY_SCALE - 1 );
+        m_equalizedDataset[i] = equalizedHistogram[static_cast< unsigned int >( value > 0 ? value : 0) ];
     }
 
     clock_t endTime( clock() );

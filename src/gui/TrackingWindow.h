@@ -43,6 +43,7 @@ public:
     void OnSelectFileDTI                       ( wxCommandEvent& event );
     void OnSelectFileHARDI                     ( wxCommandEvent& event );
     void OnRandomSeeding                       ( wxCommandEvent& event );
+	void OnToggleDetProb					   ( wxCommandEvent& event );
     void OnShellSeeding                        ( wxCommandEvent& event );
     void OnSelectMask                          ( wxCommandEvent& event );
     void OnSelectGM                            ( wxCommandEvent& event );
@@ -124,6 +125,7 @@ private:
     wxTextCtrl          *m_pTxtMaxLengthBox;
 	wxButton			*m_pBtnConvert;
     wxToggleButton      *m_pToggleRandomInit;
+	wxToggleButton      *m_pToggleDetProb;
     
     //wxStaticText        *m_pTextAxisSeedNb;
     //wxStaticText        *m_pTextTotalSeedNb;

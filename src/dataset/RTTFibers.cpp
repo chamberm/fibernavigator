@@ -838,7 +838,7 @@ Vector RTTFibers::advecIntegrateHARDI( Vector vin, const std::vector<float> &sti
     {  
         vMagnet = magneticField(vin, sticks, s_number, pos, vOut, F, g);
     }
-    else
+	else if(RTTrackingHelper::getInstance()->isDet())
     {
         for(unsigned int i=0; i < sticks.size()/3; i++)
         {
@@ -867,6 +867,28 @@ Vector RTTFibers::advecIntegrateHARDI( Vector vin, const std::vector<float> &sti
             }
         }
     }
+	else
+	{
+		std::vector<float> dir;
+		int sum = 0;
+		do{dir = pickDirection(sticks, false, pos);
+		vOut.x = dir[0];
+		vOut.y = dir[1];
+		vOut.z = dir[2];
+		float dot = vin.Dot(vOut);
+		if( vin.Dot(vOut) < 0 ) //Ensures both vectors points in the same direction
+		{
+			vOut *= -1;
+		}
+		dot = vin.Dot(vOut);
+		float acos = std::acos( dot );
+		angle = 180 * acos / M_PI;
+        
+		//Direction most probable
+		sum++;
+		}
+		while(angle > m_angleThreshold && sum > 20);
+	}
 
     //White Matter version of Chamberland et al. 2014 Frontiers in Neuroinformatics 
     //Vector res = 0.5f * wm * vOut + (0.5f * wm) * ( (1.0 - puncture ) * vin + puncture * vOut);

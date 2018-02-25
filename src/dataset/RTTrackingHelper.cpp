@@ -24,6 +24,7 @@ RTTrackingHelper::RTTrackingHelper()
 	m_id( 0 ),
     m_isSrcAlpha( true ),
     m_isRandomInit( true ),
+	m_isDeterministic(true),
     flippedAxes( 1, 1, 1),
     m_bufferID( 0 )
 {

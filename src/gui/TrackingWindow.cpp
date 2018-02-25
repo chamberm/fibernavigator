@@ -240,6 +240,13 @@ int slider3 = 150;
     wxBoxSizer *pBoxRowRand = new wxBoxSizer( wxHORIZONTAL );
     pBoxRowRand->Add( m_pToggleRandomInit, 0, wxALIGN_CENTER | wxALL, 1 );
 	m_pTrackingSizer->Add( pBoxRowRand, 0, wxFIXED_MINSIZE | wxALL, 2 );
+
+	//m_pToggleDetProb = new wxToggleButton( this, wxID_ANY,wxT("Deterministic"), wxDefaultPosition, wxSize(2*zoomS, -1) );
+ //   Connect( m_pToggleDetProb->GetId(), wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler(TrackingWindow::OnToggleDetProb) );
+
+ //   wxBoxSizer *pBoxRowDetProb = new wxBoxSizer( wxHORIZONTAL );
+ //   pBoxRowDetProb->Add( m_pToggleDetProb, 0, wxALIGN_CENTER | wxALL, 1 );
+	//m_pTrackingSizer->Add( pBoxRowDetProb, 0, wxFIXED_MINSIZE | wxALL, 2 );
    
     wxBoxSizer *pBoxFlips = new wxBoxSizer( wxHORIZONTAL );
     pBoxFlips->Add(new wxStaticText( this, wxID_ANY, wxT( "Init. dir." ), wxDefaultPosition, wxSize(30, -1), wxALIGN_CENTER ), 1, wxEXPAND | wxALL, 1 );
@@ -972,6 +979,23 @@ void TrackingWindow::OnRandomSeeding( wxCommandEvent& WXUNUSED(event) )
     else
     {
         m_pToggleRandomInit->SetLabel(wxT( "Randomly spaced seeds"));
+    }
+}
+
+//Deprecated
+void TrackingWindow::OnToggleDetProb( wxCommandEvent& WXUNUSED(event) )
+{
+    RTTrackingHelper::getInstance()->toggleDetProb();
+    RTTrackingHelper::getInstance()->setRTTDirty( true );
+    
+	//Set nb of seeds depending on the seeding mode 
+    if( !RTTrackingHelper::getInstance()->isDet() )
+    {
+		m_pToggleDetProb->SetLabel(wxT( "Probabilistic"));
+    }
+    else
+    {
+        m_pToggleDetProb->SetLabel(wxT( "Deterministic"));
     }
 }
 
